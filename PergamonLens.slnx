@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PergamonLens.Application/PergamonLens.Application.csproj" />
+    <Project Path="src/PergamonLens.Domain/PergamonLens.Domain.csproj" />
+    <Project Path="src/PergamonLens.Infrastructure/PergamonLens.Infrastructure.csproj" />
+    <Project Path="src/PergamonLens.Web/PergamonLens.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PergamonLens.IntegrationTests/PergamonLens.IntegrationTests.csproj" />
+    <Project Path="tests/PergamonLens.UnitTests/PergamonLens.UnitTests.csproj" />
+  </Folder>
+</Solution>

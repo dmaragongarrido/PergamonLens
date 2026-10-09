@@ -1,0 +1,6 @@
+@PergamonLens.Web_HostAddress = http://localhost:5147
+
+GET {{PergamonLens.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
