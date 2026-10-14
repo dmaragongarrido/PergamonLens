@@ -29,6 +29,7 @@
   - [ ] DTOs, Mappings y Validaciones (FluentValidation).
 
 - [ ] **Hito 4: Capa de Infraestructura & Persistencia**
+  - [ ] Instalación y arranque de Docker Desktop / contenedor SQL Server 2022 (verificación de conexión con SSMS).
   - [ ] `ApplicationDbContext` de EF Core y mapeos Fluent API para SQL Server.
   - [ ] Migraciones iniciales de EF Core sobre SQL Server.
   - [ ] Cliente HTTP resiliente para Discogs API (Polly: rate limiting, reintentos).
