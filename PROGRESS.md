@@ -1,6 +1,6 @@
 # Registro de Progreso: PergamonLens
 
-## Estado Actual: HITO 2 - Core de Dominio (Música & Vinilos)
+## Estado Actual: HITO 3 - Capa de Aplicación (Casos de Uso)
 
 ---
 
@@ -16,11 +16,13 @@
   - [x] Inicializar Git y realizar primer commit limpio.
   - [x] Conectar y publicar repositorio público en GitHub: `https://github.com/dmaragongarrido/PergamonLens`.
 
-- [ ] **Hito 2: Core de Dominio (Música & Vinilos)**
-  - [ ] Definir entidad base y agregados (`Collection`, `VinylRecord`, `PhysicalRelease`, `Artist`).
-  - [ ] Value Objects (`Barcode`, `CatalogueNumber`, `ReleaseYear`).
-  - [ ] Interfaces de abstracción (`IVisionService`, `IDiscogsService`, `ICollectionRepository`).
-  - [ ] Tests unitarios de dominio (xUnit + FluentAssertions).
+- [x] **Hito 2: Core de Dominio (Música & Vinilos)**
+  - [x] Definir entidad base y agregados (`VinylRecord`, `Track`, `Entity<T>`, `AggregateRoot<T>`).
+  - [x] Value Objects (`Barcode`, `CatalogueNumber`, `ReleaseYear`, `VinylRecordId`, `CollectionStatistics`).
+  - [x] Enums de dominio (`MediaCondition`, `ProcessingStatus`, `VinylSize`, `VinylSpeed`).
+  - [x] Eventos de dominio (`VinylRecordCreatedEvent`, `VinylRecordEnrichedEvent`, `VinylRecordConfirmedEvent`, `VinylRecordFailedEvent`).
+  - [x] Interfaces de abstracción (`IVisionService`, `IDiscogsService`, `IVinylRecordRepository`, `ICollectionRepository`).
+  - [x] Tests unitarios de dominio (55 tests en verde con xUnit + FluentAssertions).
 
 - [ ] **Hito 3: Capa de Aplicación (Casos de Uso)**
   - [ ] Caso de uso: Subir imagen y encolar análisis visual.
@@ -58,3 +60,14 @@
 - Configuración de `.editorconfig`, `.gitignore` y `docker-compose.yml` para SQL Server 2022.
 - Inicialización de Git, primer commit limpio y publicación del repositorio público en GitHub: [github.com/dmaragongarrido/PergamonLens](https://github.com/dmaragongarrido/PergamonLens).
 - **HITO 1 COMPLETADO**. Listo para arrancar el Hito 2 (Core de Dominio).
+
+### Día 2 (16/10/2026)
+- Migración y configuración del nuevo entorno de trabajo: .NET 10 SDK (`10.0.402`), Git (`2.55`), GitHub CLI (`2.102`), Docker Desktop y WSL.
+- Implementación del Core de Dominio táctico bajo DDD en `PergamonLens.Domain`:
+  - Clases base: `Entity<T>`, `AggregateRoot<T>`, `IDomainEvent`, `DomainException`.
+  - Value Objects inmutables con validación y checksums: `Barcode`, `CatalogueNumber`, `ReleaseYear`, `VinylRecordId`, `CollectionStatistics`.
+  - Raíz de agregado `VinylRecord` encapsulando metadatos discográficos, especificaciones físicas, estados (`ProcessingStatus`), escala Goldmine (`MediaCondition`) y colección interna de pistas (`Track`).
+  - Eventos de dominio: `VinylRecordCreatedEvent`, `VinylRecordEnrichedEvent`, `VinylRecordConfirmedEvent`, `VinylRecordFailedEvent`.
+  - Contratos de persistencia y servicios: `IVinylRecordRepository`, `ICollectionRepository`, `IVisionService`, `IDiscogsService`.
+- Batería completa de pruebas unitarias en `PergamonLens.UnitTests`: 55 pruebas pasando en verde (0 errores).
+- **HITO 2 COMPLETADO**. Listo para arrancar el Hito 3 (Capa de Aplicación).
