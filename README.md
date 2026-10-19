@@ -47,7 +47,10 @@ PergamonLens/
 ```
 
 ### 🧱 Principios de Diseño
-- **Clean Architecture & DDD:** Reglas de negocio independientes de frameworks, bases de datos e interfaces externas.
+- **Clean Architecture & DDD Puro:** Reglas de negocio independientes de frameworks, bases de datos y librerías externas.
+  - **Aggregate Root Polivalente (`MusicRelease`):** Modela lanzamientos musicales físicos en múltiples formatos (`MediaFormat`: Vinilo, CD, Casete y Box Set), controlando el inventario de pistas (`Track`), graduación oficial Goldmine (`MediaCondition`) y especificaciones físicas (pulgadas, RPM, número de soportes).
+  - **Value Objects con Validación Estricta:** Inmutabilidad y blindaje contra *Primitive Obsession* (`Barcode` con cálculo y validación de checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
+  - **Eventos de Dominio:** Desacoplamiento total para disparar acciones reactivas asíncronas (`MusicReleaseCreatedEvent`, `MusicReleaseEnrichedEvent`, etc.).
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
 - **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
 - **Persistencia Robusta:** **Microsoft SQL Server** con **Entity Framework Core**, migraciones automatizadas e índices optimizados para búsqueda de colecciones.
@@ -71,39 +74,52 @@ PergamonLens/
 
 ## 🚀 Hoja de Ruta del MVP (Fase 1)
 
-- [ ] **Hito 1: Core de Dominio y BBDD**
-  - Entidades de Colección, Ítems de Música (Vinilo/CD), Metadatos y Estados de Procesamiento.
-  - Configuración de EF Core y migraciones sobre SQL Server.
-- [ ] **Hito 2: Integración de Visión & Pipeline Asíncrono**
-  - Servicio de ingesta de imágenes.
-  - Extractor visual multimodal (reconocimiento de texto y portadas).
-  - Integración inicial con Discogs API (búsqueda y enriquecimiento de vinilos).
-- [ ] **Hito 3: API & Interfaz Móvil**
-  - Endpoints RESTful para escaneo, confirmación y consulta de colección.
-  - Frontend web con botón de captura de cámara nativa móvil.
-- [ ] **Hito 4: Docker & CI/CD**
-  - `docker-compose.yml` para levantar API + SQL Server.
-  - Pipeline de GitHub Actions para ejecución automática de tests en cada Pull Request.
+- [x] **Hito 1: Scaffolding y Entorno Base**
+  - Solución Clean Architecture en .NET 10 (`Domain`, `Application`, `Infrastructure`, `Web`, `UnitTests`, `IntegrationTests`).
+  - Configuración de `docker-compose.yml` para SQL Server 2022, `.editorconfig` y `.gitignore`.
+  - Repositorio público configurado en GitHub.
+- [x] **Hito 2: Core de Dominio (Música & Formatos Físicos: Vinilo, CD, Casete)**
+  - Raíz de agregado `MusicRelease` con invariantes de negocio, ciclo de vida (`ProcessingStatus`) y soporte multiformato.
+  - Value Objects inmutables (`Barcode` con checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
+  - Eventos de dominio y contratos/puertos de abstracción (`IMusicReleaseRepository`, `ICollectionRepository`, `IVisionService`, `IDiscogsService`).
+  - Batería de **59 tests unitarios** en verde con xUnit y FluentAssertions (~0.5s de ejecución).
+- [ ] **Hito 3: Capa de Aplicación (Casos de Uso / CQRS)**
+  - Casos de uso de escaneo, enriquecimiento con Discogs y confirmación en bóveda personal.
+  - DTOs, Mappings y Validaciones fluidas con FluentValidation.
+- [ ] **Hito 4: Capa de Infraestructura & Persistencia**
+  - Mapeos Fluent API de EF Core y migraciones sobre SQL Server 2022.
+  - Cliente HTTP resiliente para Discogs API con Polly (rate limiting y backoff exponencial).
+  - Adaptador de Visión IA y canal asíncrono en segundo plano (`System.Threading.Channels`).
+- [ ] **Hito 5: Capa Web / Minimal APIs & Interfaz Móvil**
+  - Endpoints RESTful en ASP.NET Core con OpenAPI.
+  - Frontend Web responsive optimizado para móvil con captura directa de cámara nativa.
+- [ ] **Hito 6: Testing de Integración & CI/CD**
+  - Tests de integración con Testcontainers MSSQL.
+  - Pipeline automatizado de GitHub Actions (build + tests en cada Pull Request).
 
 ---
 
 ## 💻 Inicio Rápido en Local
 
 ### Requisitos Previos
-- [.NET 10 SDK](https://dotnet.microsoft.com/) (o .NET 8 SDK).
-- [Docker Desktop](https://www.docker.com/) (para levantar SQL Server sin instalaciones adicionales).
+- [.NET 10 SDK](https://dotnet.microsoft.com/)
+- [Docker Desktop](https://www.docker.com/) (para levantar SQL Server local)
 
 ### Pasos
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/PergamonLens.git
+   git clone https://github.com/dmaragongarrido/PergamonLens.git
    cd PergamonLens
    ```
-2. Levantar la base de datos SQL Server:
+2. Ejecutar la batería de tests unitarios:
+   ```bash
+   dotnet test
+   ```
+3. Levantar la base de datos SQL Server:
    ```bash
    docker compose up -d sqlserver
    ```
-3. Ejecutar las migraciones y la aplicación:
+4. Ejecutar las migraciones y la aplicación:
    ```bash
    dotnet run --project src/PergamonLens.Web
    ```
