@@ -41,3 +41,6 @@ docker/data/
 ## Antigravity / Gemini local metadata (ignore working brain/scratch if placed inside)
 .gemini/
 
+## Internal developer session logs
+PROGRESS.md
+
