@@ -22,3 +22,4 @@ public interface IVisionService
         string contentType,
         CancellationToken cancellationToken = default);
 }
+

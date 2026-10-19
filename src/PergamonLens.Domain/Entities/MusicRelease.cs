@@ -7,13 +7,15 @@ using PergamonLens.Domain.ValueObjects;
 namespace PergamonLens.Domain.Entities;
 
 /// <summary>
-/// Raíz de agregado (Aggregate Root) que representa un disco de vinilo físico en la colección.
-/// Encapsula sus metadatos discográficos, especificaciones físicas, estado de conservación y pistas.
+/// Raíz de agregado (Aggregate Root) que representa un lanzamiento musical físico en la colección
+/// (Vinilo, CD, Casete o Box Set).
+/// Encapsula sus metadatos discográficos, formato físico, estado de conservación y lista de pistas.
 /// </summary>
-public sealed class VinylRecord : AggregateRoot<VinylRecordId>
+public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
 {
     private readonly List<Track> _tracks = [];
 
+    public MediaFormat Format { get; private set; } = MediaFormat.Vinyl;
     public string Title { get; private set; } = string.Empty;
     public string Artist { get; private set; } = string.Empty;
     public string? Label { get; private set; }
@@ -23,13 +25,17 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     public string? Country { get; private set; }
     public string? CoverImageUrl { get; private set; }
 
-    public VinylSize Size { get; private set; } = VinylSize.Inch12;
-    public VinylSpeed Speed { get; private set; } = VinylSpeed.Rpm33;
     public int DiscsCount { get; private set; } = 1;
 
+    // Atributos específicos cuando el formato es vinilo
+    public VinylSize? VinylSize { get; private set; }
+    public VinylSpeed? VinylSpeed { get; private set; }
+
+    // Graduación del estado de conservación (Goldmine standard)
     public MediaCondition? MediaCondition { get; private set; }
     public MediaCondition? SleeveCondition { get; private set; }
 
+    // Ciclo de vida y procesamiento inteligente
     public ProcessingStatus Status { get; private set; } = ProcessingStatus.PendingAnalysis;
     public long? DiscogsReleaseId { get; private set; }
     public string? Notes { get; private set; }
@@ -39,16 +45,17 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
 
     public IReadOnlyCollection<Track> Tracks => _tracks.AsReadOnly();
 
-    private VinylRecord(
-        VinylRecordId id,
+    private MusicRelease(
+        MusicReleaseId id,
+        MediaFormat format,
         string title,
         string artist,
         Barcode? barcode,
         CatalogueNumber? catalogueNumber,
         ReleaseYear? releaseYear,
-        VinylSize size,
-        VinylSpeed speed,
         int discsCount,
+        VinylSize? vinylSize,
+        VinylSpeed? vinylSpeed,
         string? label,
         string? country,
         string? coverImageUrl,
@@ -56,14 +63,15 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
         ProcessingStatus status,
         DateTime createdAtUtc) : base(id)
     {
+        Format = format;
         Title = title;
         Artist = artist;
         Barcode = barcode;
         CatalogueNumber = catalogueNumber;
         ReleaseYear = releaseYear;
-        Size = size;
-        Speed = speed;
         DiscsCount = discsCount;
+        VinylSize = vinylSize;
+        VinylSpeed = vinylSpeed;
         Label = label;
         Country = country;
         CoverImageUrl = coverImageUrl;
@@ -73,20 +81,21 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     }
 
     // Constructor privado requerido por EF Core
-    private VinylRecord() { }
+    private MusicRelease() { }
 
     /// <summary>
-    /// Crea una nueva instancia de vinilo en estado pendiente de análisis o pre-identificado.
+    /// Crea una nueva instancia de lanzamiento musical genérico.
     /// </summary>
-    public static VinylRecord Create(
+    public static MusicRelease Create(
         string title,
         string artist,
+        MediaFormat format = MediaFormat.Vinyl,
         Barcode? barcode = null,
         CatalogueNumber? catalogueNumber = null,
         ReleaseYear? releaseYear = null,
-        VinylSize size = VinylSize.Inch12,
-        VinylSpeed speed = VinylSpeed.Rpm33,
         int discsCount = 1,
+        VinylSize? vinylSize = null,
+        VinylSpeed? vinylSpeed = null,
         string? label = null,
         string? country = null,
         string? coverImageUrl = null,
@@ -96,19 +105,24 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
         ValidateArtist(artist);
         ValidateDiscsCount(discsCount);
 
-        var id = VinylRecordId.New();
+        var id = MusicReleaseId.New();
         var now = DateTime.UtcNow;
 
-        var vinyl = new VinylRecord(
+        // Si es vinilo y no se especificó tamaño/velocidad, asignamos los estándares (12" a 33 RPM)
+        var size = format == MediaFormat.Vinyl ? (vinylSize ?? Enums.VinylSize.Inch12) : vinylSize;
+        var speed = format == MediaFormat.Vinyl ? (vinylSpeed ?? Enums.VinylSpeed.Rpm33) : vinylSpeed;
+
+        var release = new MusicRelease(
             id,
+            format,
             title.Trim(),
             artist.Trim(),
             barcode,
             catalogueNumber,
             releaseYear,
+            discsCount,
             size,
             speed,
-            discsCount,
             label?.Trim(),
             country?.Trim(),
             coverImageUrl?.Trim(),
@@ -116,9 +130,104 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
             ProcessingStatus.PendingAnalysis,
             now);
 
-        vinyl.AddDomainEvent(new VinylRecordCreatedEvent(id, vinyl.Title, vinyl.Artist, now));
+        release.AddDomainEvent(new MusicReleaseCreatedEvent(id, release.Title, release.Artist, format, now));
 
-        return vinyl;
+        return release;
+    }
+
+    /// <summary>
+    /// Factoría de conveniencia para la creación de un disco de vinilo.
+    /// </summary>
+    public static MusicRelease CreateVinyl(
+        string title,
+        string artist,
+        VinylSize size = Enums.VinylSize.Inch12,
+        VinylSpeed speed = Enums.VinylSpeed.Rpm33,
+        int discsCount = 1,
+        Barcode? barcode = null,
+        CatalogueNumber? catalogueNumber = null,
+        ReleaseYear? releaseYear = null,
+        string? label = null,
+        string? country = null,
+        string? coverImageUrl = null,
+        string? notes = null)
+    {
+        return Create(
+            title,
+            artist,
+            MediaFormat.Vinyl,
+            barcode,
+            catalogueNumber,
+            releaseYear,
+            discsCount,
+            size,
+            speed,
+            label,
+            country,
+            coverImageUrl,
+            notes);
+    }
+
+    /// <summary>
+    /// Factoría de conveniencia para la creación de un CD (Compact Disc).
+    /// </summary>
+    public static MusicRelease CreateCd(
+        string title,
+        string artist,
+        int discsCount = 1,
+        Barcode? barcode = null,
+        CatalogueNumber? catalogueNumber = null,
+        ReleaseYear? releaseYear = null,
+        string? label = null,
+        string? country = null,
+        string? coverImageUrl = null,
+        string? notes = null)
+    {
+        return Create(
+            title,
+            artist,
+            MediaFormat.CD,
+            barcode,
+            catalogueNumber,
+            releaseYear,
+            discsCount,
+            vinylSize: null,
+            vinylSpeed: null,
+            label,
+            country,
+            coverImageUrl,
+            notes);
+    }
+
+    /// <summary>
+    /// Factoría de conveniencia para la creación de un casete de audio.
+    /// </summary>
+    public static MusicRelease CreateCassette(
+        string title,
+        string artist,
+        int tapesCount = 1,
+        Barcode? barcode = null,
+        CatalogueNumber? catalogueNumber = null,
+        ReleaseYear? releaseYear = null,
+        string? label = null,
+        string? country = null,
+        string? coverImageUrl = null,
+        string? notes = null)
+    {
+        return Create(
+            title,
+            artist,
+            MediaFormat.Cassette,
+            barcode,
+            catalogueNumber,
+            releaseYear,
+            tapesCount,
+            vinylSize: null,
+            vinylSpeed: null,
+            label,
+            country,
+            coverImageUrl,
+            notes);
     }
 
     /// <summary>
@@ -154,7 +263,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     }
 
     /// <summary>
-    /// Enriquece el vinilo con información contrastada obtenida de la API canónica (ej. Discogs).
+    /// Enriquece el lanzamiento con información contrastada obtenida de la API canónica (ej. Discogs).
     /// </summary>
     public void EnrichFromDiscogs(
         long discogsReleaseId,
@@ -168,7 +277,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
 
         if (discogsReleaseId <= 0)
         {
-            throw new VinylRecordDomainException("El identificador de release de Discogs debe ser un número positivo.");
+            throw new MusicReleaseDomainException("El identificador de release de Discogs debe ser un número positivo.");
         }
 
         DiscogsReleaseId = discogsReleaseId;
@@ -189,23 +298,23 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
         Status = ProcessingStatus.Enriched;
         UpdatedAtUtc = DateTime.UtcNow;
 
-        AddDomainEvent(new VinylRecordEnrichedEvent(Id, discogsReleaseId, _tracks.Count, UpdatedAtUtc.Value));
+        AddDomainEvent(new MusicReleaseEnrichedEvent(Id, discogsReleaseId, _tracks.Count, UpdatedAtUtc.Value));
     }
 
     /// <summary>
-    /// Valida y confirma el vinilo para su preservación en la bóveda personal del coleccionista.
+    /// Valida y confirma el lanzamiento para su custodia en la colección personal del usuario.
     /// </summary>
     public void Confirm()
     {
         if (Status == ProcessingStatus.Failed)
         {
-            throw new VinylRecordDomainException("No se puede confirmar un vinilo que se encuentra en estado fallido.");
+            throw new MusicReleaseDomainException("No se puede confirmar un ítem que se encuentra en estado fallido.");
         }
 
         Status = ProcessingStatus.Confirmed;
         UpdatedAtUtc = DateTime.UtcNow;
 
-        AddDomainEvent(new VinylRecordConfirmedEvent(Id, UpdatedAtUtc.Value));
+        AddDomainEvent(new MusicReleaseConfirmedEvent(Id, UpdatedAtUtc.Value));
     }
 
     /// <summary>
@@ -219,11 +328,11 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
         Notes = string.IsNullOrWhiteSpace(Notes) ? $"Error: {reason.Trim()}" : $"{Notes} | Error: {reason.Trim()}";
         UpdatedAtUtc = DateTime.UtcNow;
 
-        AddDomainEvent(new VinylRecordFailedEvent(Id, reason.Trim(), UpdatedAtUtc.Value));
+        AddDomainEvent(new MusicReleaseFailedEvent(Id, reason.Trim(), UpdatedAtUtc.Value));
     }
 
     /// <summary>
-    /// Asigna o actualiza la graduación del estado físico de conservación del vinilo y su cubierta.
+    /// Asigna o actualiza la graduación del estado físico de conservación del soporte sonoro y su funda/caja.
     /// </summary>
     public void SetGrading(MediaCondition mediaCondition, MediaCondition sleeveCondition)
     {
@@ -233,20 +342,35 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     }
 
     /// <summary>
-    /// Actualiza el formato físico (dimensiones, velocidad y número de discos).
+    /// Configura las especificaciones físicas si el lanzamiento es un vinilo.
     /// </summary>
-    public void SetPhysicalFormat(VinylSize size, VinylSpeed speed, int discsCount)
+    public void SetVinylSpecifications(VinylSize size, VinylSpeed speed, int discsCount = 1)
     {
+        if (Format != MediaFormat.Vinyl)
+        {
+            throw new MusicReleaseDomainException("Solo se pueden configurar especificaciones de vinilo en lanzamientos con formato Vinyl.");
+        }
+
         ValidateDiscsCount(discsCount);
 
-        Size = size;
-        Speed = speed;
+        VinylSize = size;
+        VinylSpeed = speed;
         DiscsCount = discsCount;
         UpdatedAtUtc = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Añade una pista musical asegurando que no existan posiciones duplicadas (ej. dos cortes 'A1').
+    /// Actualiza el número de soportes (discos/casetes) incluidos en la edición.
+    /// </summary>
+    public void SetDiscsCount(int discsCount)
+    {
+        ValidateDiscsCount(discsCount);
+        DiscsCount = discsCount;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Añade una pista musical asegurando que no existan posiciones duplicadas (ej. dos cortes 'A1' o dos pistas '1').
     /// </summary>
     public void AddTrack(Track track)
     {
@@ -256,7 +380,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     }
 
     /// <summary>
-    /// Elimina una pista del vinilo por su identificador.
+    /// Elimina una pista musical por su identificador.
     /// </summary>
     public void RemoveTrack(Guid trackId)
     {
@@ -280,7 +404,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     {
         if (_tracks.Any(t => t.Position.Equals(track.Position, StringComparison.OrdinalIgnoreCase)))
         {
-            throw new InvalidTrackException($"Ya existe una pista con la posición '{track.Position}' en este vinilo.");
+            throw new InvalidTrackException($"Ya existe una pista con la posición '{track.Position}' en este lanzamiento musical.");
         }
 
         _tracks.Add(track);
@@ -290,7 +414,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     {
         if (Status == ProcessingStatus.Confirmed)
         {
-            throw new VinylRecordDomainException("El vinilo ya está confirmado en la colección personal y no puede ser modificado por procesos automáticos.");
+            throw new MusicReleaseDomainException("El lanzamiento ya está confirmado en la colección personal y no puede ser modificado por procesos automáticos.");
         }
     }
 
@@ -298,7 +422,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     {
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw new VinylRecordDomainException("El título del vinilo no puede estar vacío.");
+            throw new MusicReleaseDomainException("El título del lanzamiento no puede estar vacío.");
         }
     }
 
@@ -306,7 +430,7 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     {
         if (string.IsNullOrWhiteSpace(artist))
         {
-            throw new VinylRecordDomainException("El artista del vinilo no puede estar vacío.");
+            throw new MusicReleaseDomainException("El artista del lanzamiento no puede estar vacío.");
         }
     }
 
@@ -314,7 +438,8 @@ public sealed class VinylRecord : AggregateRoot<VinylRecordId>
     {
         if (discsCount < 1)
         {
-            throw new VinylRecordDomainException("El número de discos debe ser como mínimo 1.");
+            throw new MusicReleaseDomainException("El número de discos/casetes debe ser como mínimo 1.");
         }
     }
 }
+
