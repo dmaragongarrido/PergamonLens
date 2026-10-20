@@ -23,6 +23,17 @@ Este archivo se carga automáticamente en el contexto de G al abrir el espacio d
 
 ---
 
+## 🌿 Estrategia de Ramas & Git Flow (GitHub Flow)
+A partir del Hito 4, el proyecto opera rigurosamente bajo **GitHub Flow**:
+1. **Rama principal:** `main` (siempre estable, protegida y con build en verde).
+2. **Ramas de funcionalidad:** `feature/<nombre-feature-o-hito>` (ej. `feature/hito-4-infrastructure`).
+3. **Pull Requests obligatorias:**
+   - Todo trabajo se integra vía Pull Request hacia `main`.
+   - Se verifica que el pipeline de GitHub Actions (`.github/workflows/ci.yml`) aprueba en verde antes del merge.
+   - Usar *Squash and Merge* para mantener un historial lineal y limpio en `main`.
+
+---
+
 ## 🔄 Protocolo de Inicio de Sesión
 Al comenzar una nueva conversación en este workspace:
 1. **Revisar estado:** Consultar inmediatamente `PROGRESS.md` y `README.md`.

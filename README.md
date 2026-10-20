@@ -54,6 +54,7 @@ PergamonLens/
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
 - **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
 - **Persistencia Robusta:** **Microsoft SQL Server** con **Entity Framework Core**, migraciones automatizadas e índices optimizados para búsqueda de colecciones.
+- **Integración Continua & GitHub Flow:** Desarrollo guiado por ramas cortas (`feature/*`), validación estricta automatizada mediante **GitHub Actions** en cada Pull Request (`dotnet build` + `dotnet test`) y estrategia de *Squash & Merge* hacia `main`.
 
 ---
 
