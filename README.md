@@ -83,9 +83,12 @@ PergamonLens/
   - Value Objects inmutables (`Barcode` con checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
   - Eventos de dominio y contratos/puertos de abstracción (`IMusicReleaseRepository`, `ICollectionRepository`, `IVisionService`, `IDiscogsService`).
   - Batería de **59 tests unitarios** en verde con xUnit y FluentAssertions (~0.5s de ejecución).
-- [ ] **Hito 3: Capa de Aplicación (Casos de Uso / CQRS)**
-  - Casos de uso de escaneo, enriquecimiento con Discogs y confirmación en bóveda personal.
-  - DTOs, Mappings y Validaciones fluidas con FluentValidation.
+- [x] **Hito 3: Capa de Aplicación (Casos de Uso / CQRS)**
+  - Pipeline de MediatR con validación transversal (`ValidationBehavior`) y FluentValidation.
+  - Comandos y Handlers: `CreateReleaseCommand`, `ScanReleaseCommand`, `EnrichReleaseFromDiscogsCommand`, `ConfirmReleaseCommand`, `DeleteReleaseCommand`.
+  - Consultas y Handlers: `GetReleaseByIdQuery`, `GetCollectionQuery` (filtros combinados), `GetCollectionStatisticsQuery`, `SearchDiscogsQuery`.
+  - DTOs inmutables y mapeos estáticos puros (`MappingExtensions`).
+  - Suite de **97 tests unitarios** al 100% en verde (~250 ms).
 - [ ] **Hito 4: Capa de Infraestructura & Persistencia**
   - Mapeos Fluent API de EF Core y migraciones sobre SQL Server 2022.
   - Cliente HTTP resiliente para Discogs API con Polly (rate limiting y backoff exponencial).
