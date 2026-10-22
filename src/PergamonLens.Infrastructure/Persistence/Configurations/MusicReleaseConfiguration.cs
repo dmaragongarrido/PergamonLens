@@ -20,6 +20,11 @@ public sealed class MusicReleaseConfiguration : IEntityTypeConfiguration<MusicRe
         builder.Property(x => x.Id)
             .HasConversion(id => id.Value, val => new MusicReleaseId(val));
 
+        builder.Property(x => x.UserId)
+            .IsRequired()
+            .HasConversion(id => id.Value, val => UserId.From(val))
+            .HasMaxLength(450);
+
         builder.Property(x => x.Title)
             .IsRequired()
             .HasMaxLength(500);
@@ -104,7 +109,10 @@ public sealed class MusicReleaseConfiguration : IEntityTypeConfiguration<MusicRe
         builder.Navigation(x => x.Tracks)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-        // Índices para optimizar búsquedas y consultas frecuentes
+        // Índices para optimizar búsquedas, aislamiento multi-usuario y consultas frecuentes
+        builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => new { x.UserId, x.Format });
+        builder.HasIndex(x => new { x.UserId, x.Status });
         builder.HasIndex(x => x.Barcode);
         builder.HasIndex(x => x.CatalogueNumber);
         builder.HasIndex(x => x.Status);

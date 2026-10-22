@@ -10,6 +10,8 @@ namespace PergamonLens.UnitTests.Entities;
 
 public class MusicReleaseTests
 {
+    private readonly UserId _testUserId = UserId.New();
+
     [Fact]
     public void CreateVinyl_WithValidData_ShouldInitializeCorrectlyAndRaiseCreatedEvent()
     {
@@ -22,6 +24,7 @@ public class MusicReleaseTests
 
         // Act
         var release = MusicRelease.CreateVinyl(
+            _testUserId,
             title,
             artist,
             VinylSize.Inch12,
@@ -35,6 +38,7 @@ public class MusicReleaseTests
 
         // Assert
         release.Id.Value.Should().NotBeEmpty();
+        release.UserId.Should().Be(_testUserId);
         release.Format.Should().Be(MediaFormat.Vinyl);
         release.Title.Should().Be(title);
         release.Artist.Should().Be(artist);
@@ -59,6 +63,7 @@ public class MusicReleaseTests
     {
         // Arrange & Act
         var cd = MusicRelease.CreateCd(
+            _testUserId,
             "OK Computer",
             "Radiohead",
             discsCount: 1,
@@ -66,6 +71,7 @@ public class MusicReleaseTests
             country: "UK");
 
         // Assert
+        cd.UserId.Should().Be(_testUserId);
         cd.Format.Should().Be(MediaFormat.CD);
         cd.VinylSize.Should().BeNull();
         cd.VinylSpeed.Should().BeNull();
@@ -80,18 +86,30 @@ public class MusicReleaseTests
     {
         // Arrange & Act
         var tape = MusicRelease.CreateCassette(
+            _testUserId,
             "Master of Puppets",
             "Metallica",
             tapesCount: 1,
             label: "Elektra");
 
         // Assert
+        tape.UserId.Should().Be(_testUserId);
         tape.Format.Should().Be(MediaFormat.Cassette);
         tape.VinylSize.Should().BeNull();
         tape.VinylSpeed.Should().BeNull();
         tape.DiscsCount.Should().Be(1);
         tape.Title.Should().Be("Master of Puppets");
         tape.Artist.Should().Be("Metallica");
+    }
+
+    [Fact]
+    public void Create_WithNullUserId_ShouldThrowArgumentNullException()
+    {
+        // Act
+        var act = () => MusicRelease.Create(null!, "Title", "Artist");
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Theory]
@@ -101,7 +119,7 @@ public class MusicReleaseTests
     public void Create_WithInvalidTitle_ShouldThrowMusicReleaseDomainException(string? invalidTitle)
     {
         // Act
-        var act = () => MusicRelease.Create(invalidTitle!, "Pink Floyd");
+        var act = () => MusicRelease.Create(_testUserId, invalidTitle!, "Pink Floyd");
 
         // Assert
         act.Should().Throw<MusicReleaseDomainException>()
@@ -115,7 +133,7 @@ public class MusicReleaseTests
     public void Create_WithInvalidArtist_ShouldThrowMusicReleaseDomainException(string? invalidArtist)
     {
         // Act
-        var act = () => MusicRelease.Create("The Dark Side of the Moon", invalidArtist!);
+        var act = () => MusicRelease.Create(_testUserId, "The Dark Side of the Moon", invalidArtist!);
 
         // Assert
         act.Should().Throw<MusicReleaseDomainException>()
@@ -128,7 +146,7 @@ public class MusicReleaseTests
     public void Create_WithInvalidDiscsCount_ShouldThrowMusicReleaseDomainException(int invalidDiscsCount)
     {
         // Act
-        var act = () => MusicRelease.Create("Title", "Artist", discsCount: invalidDiscsCount);
+        var act = () => MusicRelease.Create(_testUserId, "Title", "Artist", discsCount: invalidDiscsCount);
 
         // Assert
         act.Should().Throw<MusicReleaseDomainException>()
@@ -139,7 +157,7 @@ public class MusicReleaseTests
     public void SetVinylSpecifications_OnNonVinylFormat_ShouldThrowMusicReleaseDomainException()
     {
         // Arrange
-        var cd = MusicRelease.CreateCd("Discovery", "Daft Punk");
+        var cd = MusicRelease.CreateCd(_testUserId, "Discovery", "Daft Punk");
 
         // Act
         var act = () => cd.SetVinylSpecifications(VinylSize.Inch12, VinylSpeed.Rpm33);
@@ -153,7 +171,7 @@ public class MusicReleaseTests
     public void SetVinylSpecifications_OnVinylFormat_ShouldUpdateCorrectly()
     {
         // Arrange
-        var vinyl = MusicRelease.CreateVinyl("Blue Train", "John Coltrane");
+        var vinyl = MusicRelease.CreateVinyl(_testUserId, "Blue Train", "John Coltrane");
 
         // Act
         vinyl.SetVinylSpecifications(VinylSize.Inch10, VinylSpeed.Rpm45, discsCount: 2);
@@ -169,7 +187,7 @@ public class MusicReleaseTests
     public void UpdateIdentifiedDetails_WhenPendingAnalysis_ShouldUpdateValuesAndTransitionToIdentified()
     {
         // Arrange
-        var release = MusicRelease.Create("Unknown Title", "Unknown Artist");
+        var release = MusicRelease.Create(_testUserId, "Unknown Title", "Unknown Artist");
         var barcode = Barcode.Create("012345678905");
         var catNo = CatalogueNumber.Create("CAT-001");
         var year = ReleaseYear.Create(1982);
@@ -200,7 +218,7 @@ public class MusicReleaseTests
     public void EnrichFromDiscogs_WithValidData_ShouldUpdateMetadataTracksAndRaiseEnrichedEvent()
     {
         // Arrange
-        var release = MusicRelease.CreateCd("Abbey Road", "The Beatles");
+        var release = MusicRelease.CreateCd(_testUserId, "Abbey Road", "The Beatles");
         var tracks = new List<Track>
         {
             Track.Create("1", "Come Together", TimeSpan.FromSeconds(259)),
@@ -235,7 +253,7 @@ public class MusicReleaseTests
     public void EnrichFromDiscogs_WithInvalidReleaseId_ShouldThrowMusicReleaseDomainException(long invalidReleaseId)
     {
         // Arrange
-        var release = MusicRelease.Create("Abbey Road", "The Beatles");
+        var release = MusicRelease.Create(_testUserId, "Abbey Road", "The Beatles");
 
         // Act
         var act = () => release.EnrichFromDiscogs(invalidReleaseId);
@@ -249,7 +267,7 @@ public class MusicReleaseTests
     public void Confirm_WhenNotInFailedState_ShouldTransitionToConfirmedAndRaiseConfirmedEvent()
     {
         // Arrange
-        var release = MusicRelease.CreateVinyl("Kind of Blue", "Miles Davis");
+        var release = MusicRelease.CreateVinyl(_testUserId, "Kind of Blue", "Miles Davis");
 
         // Act
         release.Confirm();
@@ -265,7 +283,7 @@ public class MusicReleaseTests
     public void Confirm_WhenInFailedState_ShouldThrowMusicReleaseDomainException()
     {
         // Arrange
-        var release = MusicRelease.Create("Unknown", "Unknown");
+        var release = MusicRelease.Create(_testUserId, "Unknown", "Unknown");
         release.MarkAsFailed("Imagen borrosa");
 
         // Act
@@ -280,7 +298,7 @@ public class MusicReleaseTests
     public void Operations_WhenConfirmed_ShouldThrowMusicReleaseDomainException()
     {
         // Arrange
-        var release = MusicRelease.Create("A Love Supreme", "John Coltrane");
+        var release = MusicRelease.Create(_testUserId, "A Love Supreme", "John Coltrane");
         release.Confirm();
 
         // Act & Assert
@@ -297,7 +315,7 @@ public class MusicReleaseTests
     public void MarkAsFailed_ShouldSetStatusToFailedAndRaiseFailedEvent()
     {
         // Arrange
-        var release = MusicRelease.Create("Blurry Cover", "Unknown");
+        var release = MusicRelease.Create(_testUserId, "Blurry Cover", "Unknown");
 
         // Act
         release.MarkAsFailed("Código de barras ilegible");
@@ -315,7 +333,7 @@ public class MusicReleaseTests
     public void AddTrack_WhenPositionAlreadyExists_ShouldThrowInvalidTrackException()
     {
         // Arrange
-        var release = MusicRelease.Create("A Night at the Opera", "Queen");
+        var release = MusicRelease.Create(_testUserId, "A Night at the Opera", "Queen");
         release.AddTrack(Track.Create("A1", "Death on Two Legs"));
 
         // Act
@@ -330,7 +348,7 @@ public class MusicReleaseTests
     public void RemoveTrack_WithExistingTrackId_ShouldRemoveItFromTracksCollection()
     {
         // Arrange
-        var release = MusicRelease.Create("Rumours", "Fleetwood Mac");
+        var release = MusicRelease.Create(_testUserId, "Rumours", "Fleetwood Mac");
         var track = Track.Create("A1", "Second Hand News");
         release.AddTrack(track);
 
@@ -345,7 +363,7 @@ public class MusicReleaseTests
     public void SetGrading_ShouldUpdateConditions()
     {
         // Arrange
-        var release = MusicRelease.CreateVinyl("Led Zeppelin IV", "Led Zeppelin");
+        var release = MusicRelease.CreateVinyl(_testUserId, "Led Zeppelin IV", "Led Zeppelin");
 
         // Act
         release.SetGrading(MediaCondition.NearMint, MediaCondition.VeryGoodPlus);
@@ -356,4 +374,3 @@ public class MusicReleaseTests
         release.UpdatedAtUtc.Should().NotBeNull();
     }
 }
-

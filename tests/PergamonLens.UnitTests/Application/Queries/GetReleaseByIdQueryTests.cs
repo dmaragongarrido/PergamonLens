@@ -24,7 +24,7 @@ public class GetReleaseByIdQueryTests
     public async Task Handle_WhenReleaseExists_ShouldReturnDto()
     {
         // Arrange
-        var release = MusicRelease.Create("Blue Train", "John Coltrane");
+        var release = MusicRelease.Create(UserId.New(), "Blue Train", "John Coltrane");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -73,4 +73,3 @@ public class GetReleaseByIdQueryTests
         result.Errors.Should().Contain(e => e.PropertyName == "Id");
     }
 }
-

@@ -9,12 +9,13 @@ namespace PergamonLens.Domain.Entities;
 /// <summary>
 /// Raíz de agregado (Aggregate Root) que representa un lanzamiento musical físico en la colección
 /// (Vinilo, CD, Casete o Box Set).
-/// Encapsula sus metadatos discográficos, formato físico, estado de conservación y lista de pistas.
+/// Encapsula sus metadatos discográficos, formato físico, propietario (UserId), estado de conservación y lista de pistas.
 /// </summary>
 public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
 {
     private readonly List<Track> _tracks = [];
 
+    public UserId UserId { get; private set; } = null!;
     public MediaFormat Format { get; private set; } = MediaFormat.Vinyl;
     public string Title { get; private set; } = string.Empty;
     public string Artist { get; private set; } = string.Empty;
@@ -47,6 +48,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
 
     private MusicRelease(
         MusicReleaseId id,
+        UserId userId,
         MediaFormat format,
         string title,
         string artist,
@@ -63,6 +65,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         ProcessingStatus status,
         DateTime createdAtUtc) : base(id)
     {
+        UserId = userId;
         Format = format;
         Title = title;
         Artist = artist;
@@ -84,9 +87,10 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     private MusicRelease() { }
 
     /// <summary>
-    /// Crea una nueva instancia de lanzamiento musical genérico.
+    /// Crea una nueva instancia de lanzamiento musical asociada al usuario propietario.
     /// </summary>
     public static MusicRelease Create(
+        UserId userId,
         string title,
         string artist,
         MediaFormat format = MediaFormat.Vinyl,
@@ -101,6 +105,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         string? coverImageUrl = null,
         string? notes = null)
     {
+        ArgumentNullException.ThrowIfNull(userId);
         ValidateTitle(title);
         ValidateArtist(artist);
         ValidateDiscsCount(discsCount);
@@ -114,6 +119,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
 
         var release = new MusicRelease(
             id,
+            userId,
             format,
             title.Trim(),
             artist.Trim(),
@@ -130,7 +136,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
             ProcessingStatus.PendingAnalysis,
             now);
 
-        release.AddDomainEvent(new MusicReleaseCreatedEvent(id, release.Title, release.Artist, format, now));
+        release.AddDomainEvent(new MusicReleaseCreatedEvent(id, userId, release.Title, release.Artist, format, now));
 
         return release;
     }
@@ -139,6 +145,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     /// Factoría de conveniencia para la creación de un disco de vinilo.
     /// </summary>
     public static MusicRelease CreateVinyl(
+        UserId userId,
         string title,
         string artist,
         VinylSize size = Enums.VinylSize.Inch12,
@@ -153,6 +160,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         string? notes = null)
     {
         return Create(
+            userId,
             title,
             artist,
             MediaFormat.Vinyl,
@@ -172,6 +180,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     /// Factoría de conveniencia para la creación de un CD (Compact Disc).
     /// </summary>
     public static MusicRelease CreateCd(
+        UserId userId,
         string title,
         string artist,
         int discsCount = 1,
@@ -184,6 +193,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         string? notes = null)
     {
         return Create(
+            userId,
             title,
             artist,
             MediaFormat.CD,
@@ -203,6 +213,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     /// Factoría de conveniencia para la creación de un casete de audio.
     /// </summary>
     public static MusicRelease CreateCassette(
+        UserId userId,
         string title,
         string artist,
         int tapesCount = 1,
@@ -215,6 +226,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         string? notes = null)
     {
         return Create(
+            userId,
             title,
             artist,
             MediaFormat.Cassette,
@@ -442,4 +454,3 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         }
     }
 }
-

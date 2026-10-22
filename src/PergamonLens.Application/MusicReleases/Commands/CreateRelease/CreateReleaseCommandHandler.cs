@@ -1,4 +1,5 @@
 using MediatR;
+using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Application.DTOs;
 using PergamonLens.Application.Mappings;
 using PergamonLens.Domain.Entities;
@@ -13,14 +14,29 @@ namespace PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 public sealed class CreateReleaseCommandHandler : IRequestHandler<CreateReleaseCommand, MusicReleaseDto>
 {
     private readonly IMusicReleaseRepository _repository;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateReleaseCommandHandler(IMusicReleaseRepository repository)
+    public CreateReleaseCommandHandler(
+        IMusicReleaseRepository repository,
+        ICurrentUserService currentUserService)
     {
         _repository = repository;
+        _currentUserService = currentUserService;
     }
 
     public async Task<MusicReleaseDto> Handle(CreateReleaseCommand request, CancellationToken cancellationToken)
     {
+        var rawUserId = !string.IsNullOrWhiteSpace(request.UserId)
+            ? request.UserId
+            : _currentUserService.UserId;
+
+        if (string.IsNullOrWhiteSpace(rawUserId))
+        {
+            throw new UnauthorizedAccessException("Se requiere un usuario autenticado para registrar un lanzamiento musical en la colección.");
+        }
+
+        var userId = UserId.From(rawUserId);
+
         Barcode? barcode = !string.IsNullOrWhiteSpace(request.Barcode)
             ? Barcode.Create(request.Barcode)
             : null;
@@ -34,6 +50,7 @@ public sealed class CreateReleaseCommandHandler : IRequestHandler<CreateReleaseC
             : null;
 
         var release = MusicRelease.Create(
+            userId,
             request.Title,
             request.Artist,
             request.Format,
@@ -53,4 +70,3 @@ public sealed class CreateReleaseCommandHandler : IRequestHandler<CreateReleaseC
         return release.ToDto();
     }
 }
-

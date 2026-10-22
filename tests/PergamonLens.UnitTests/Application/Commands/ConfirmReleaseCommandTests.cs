@@ -26,7 +26,7 @@ public class ConfirmReleaseCommandTests
     public async Task Handle_WhenReleaseExists_ShouldSetGradingConfirmAndReturnDto()
     {
         // Arrange
-        var release = MusicRelease.Create("Wish You Were Here", "Pink Floyd");
+        var release = MusicRelease.Create(UserId.New(), "Wish You Were Here", "Pink Floyd");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -92,4 +92,3 @@ public class ConfirmReleaseCommandTests
         result.Errors.Should().Contain(e => e.PropertyName == "ReleaseId");
     }
 }
-

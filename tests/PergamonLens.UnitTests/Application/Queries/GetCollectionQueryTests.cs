@@ -4,6 +4,7 @@ using PergamonLens.Application.MusicReleases.Queries.GetCollection;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
+using PergamonLens.Domain.ValueObjects;
 
 namespace PergamonLens.UnitTests.Application.Queries;
 
@@ -22,8 +23,8 @@ public class GetCollectionQueryTests
     public async Task Handle_WithNoParameters_ShouldReturnAllReleases()
     {
         // Arrange
-        var r1 = MusicRelease.Create("Album 1", "Artist 1");
-        var r2 = MusicRelease.Create("Album 2", "Artist 2");
+        var r1 = MusicRelease.Create(UserId.New(), "Album 1", "Artist 1");
+        var r2 = MusicRelease.Create(UserId.New(), "Album 2", "Artist 2");
 
         _repositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -43,7 +44,7 @@ public class GetCollectionQueryTests
     public async Task Handle_WithSearchQuery_ShouldCallSearchAsync()
     {
         // Arrange
-        var r1 = MusicRelease.Create("A Love Supreme", "John Coltrane");
+        var r1 = MusicRelease.Create(UserId.New(), "A Love Supreme", "John Coltrane");
 
         _repositoryMock
             .Setup(r => r.SearchAsync("Coltrane", It.IsAny<CancellationToken>()))
@@ -64,7 +65,7 @@ public class GetCollectionQueryTests
     public async Task Handle_WithFormatFilter_ShouldCallGetByFormatAsync()
     {
         // Arrange
-        var r1 = MusicRelease.CreateCd("OK Computer", "Radiohead");
+        var r1 = MusicRelease.CreateCd(UserId.New(), "OK Computer", "Radiohead");
 
         _repositoryMock
             .Setup(r => r.GetByFormatAsync(MediaFormat.CD, It.IsAny<CancellationToken>()))
@@ -81,4 +82,3 @@ public class GetCollectionQueryTests
         _repositoryMock.Verify(r => r.GetByFormatAsync(MediaFormat.CD, It.IsAny<CancellationToken>()), Times.Once);
     }
 }
-

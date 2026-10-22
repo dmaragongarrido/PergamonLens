@@ -25,7 +25,7 @@ public class DeleteReleaseCommandTests
     public async Task Handle_WhenReleaseExists_ShouldCallDeleteAsync()
     {
         // Arrange
-        var release = MusicRelease.Create("Rumours", "Fleetwood Mac");
+        var release = MusicRelease.Create(UserId.New(), "Rumours", "Fleetwood Mac");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -71,4 +71,3 @@ public class DeleteReleaseCommandTests
         result.Errors.Should().Contain(e => e.PropertyName == "ReleaseId");
     }
 }
-

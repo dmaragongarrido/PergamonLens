@@ -21,6 +21,11 @@ public sealed class InvalidCatalogueNumberException(string message) : DomainExce
 public sealed class InvalidReleaseYearException(string message) : DomainException(message);
 
 /// <summary>
+/// Excepción lanzada cuando el identificador de usuario es inválido o está vacío.
+/// </summary>
+public sealed class InvalidUserIdException(string message) : DomainException(message);
+
+/// <summary>
 /// Excepción lanzada cuando una operación o regla sobre un lanzamiento musical es inválida.
 /// </summary>
 public class MusicReleaseDomainException(string message) : DomainException(message);
@@ -34,4 +39,3 @@ public sealed class VinylRecordDomainException(string message) : MusicReleaseDom
 /// Excepción lanzada cuando los datos de una pista de audio son inválidos.
 /// </summary>
 public sealed class InvalidTrackException(string message) : DomainException(message);
-

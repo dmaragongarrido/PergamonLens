@@ -33,6 +33,7 @@ public static class MappingExtensions
     {
         return new MusicReleaseDto(
             release.Id.Value,
+            release.UserId.Value,
             release.Format.ToString(),
             release.Title,
             release.Artist,
@@ -94,4 +95,3 @@ public static class MappingExtensions
             result.RawTextDetected);
     }
 }
-
