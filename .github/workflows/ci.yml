@@ -11,6 +11,20 @@ jobs:
     name: Build & Test (.NET 10)
     runs-on: ubuntu-latest
 
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "YourStrong@Passw0rd!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"YourStrong@Passw0rd!\" -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"YourStrong@Passw0rd!\" -Q \"SELECT 1\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: 📥 Check out repository
         uses: actions/checkout@v4
@@ -26,5 +40,7 @@ jobs:
       - name: 🔨 Build solution
         run: dotnet build PergamonLens.slnx --no-restore --configuration Release
 
-      - name: 🧪 Run tests
+      - name: 🧪 Run tests (Unit + Integration with SQL Server 2022)
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=PergamonLensDb;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=true"
         run: dotnet test PergamonLens.slnx --no-build --configuration Release --verbosity normal

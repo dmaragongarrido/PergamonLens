@@ -90,10 +90,13 @@ PergamonLens/
   - Consultas y Handlers: `GetReleaseByIdQuery`, `GetCollectionQuery` (filtros combinados), `GetCollectionStatisticsQuery`, `SearchDiscogsQuery`.
   - DTOs inmutables y mapeos estáticos puros (`MappingExtensions`).
   - Suite de **97 tests unitarios** al 100% en verde (~250 ms).
-- [ ] **Hito 4: Capa de Infraestructura & Persistencia**
-  - Mapeos Fluent API de EF Core y migraciones sobre SQL Server 2022.
-  - Cliente HTTP resiliente para Discogs API con Polly (rate limiting y backoff exponencial).
-  - Adaptador de Visión IA y canal asíncrono en segundo plano (`System.Threading.Channels`).
+- [x] **Hito 4: Capa de Infraestructura & Persistencia**
+  - `PergamonLensDbContext` con mapeos Fluent API para SQL Server 2022 (Value Objects, enums, cascada e índices).
+  - Migración inicial Code-First (`InitialCreate`) aplicada con éxito sobre SQL Server (`PergamonLensDb`).
+  - Repositorios de persistencia y consultas agregadas (`MusicReleaseRepository`, `CollectionRepository`).
+  - Cliente HTTP resiliente para Discogs API con Polly (`AddStandardResilienceHandler`).
+  - Procesamiento asíncrono en segundo plano mediante `System.Threading.Channels` y `BackgroundService`.
+  - Suite de **106 tests** (102 unitarios + 4 de integración con SQL Server) al 100% en verde.
 - [ ] **Hito 5: Capa Web / Minimal APIs & Interfaz Móvil**
   - Endpoints RESTful en ASP.NET Core con OpenAPI.
   - Frontend Web responsive optimizado para móvil con captura directa de cámara nativa.

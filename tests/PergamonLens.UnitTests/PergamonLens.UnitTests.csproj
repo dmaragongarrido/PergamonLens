@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PergamonLens.Domain\PergamonLens.Domain.csproj" />
     <ProjectReference Include="..\..\src\PergamonLens.Application\PergamonLens.Application.csproj" />
+    <ProjectReference Include="..\..\src\PergamonLens.Infrastructure\PergamonLens.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
