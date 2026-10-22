@@ -37,11 +37,11 @@ PergamonLens/
 ├── src/
 │   ├── PergamonLens.Domain/          # Entidades puras, Value Objects, eventos de dominio
 │   ├── PergamonLens.Application/     # Casos de uso (CQRS / MediatR), validaciones, DTOs
-│   ├── PergamonLens.Infrastructure/  # EF Core, SQL Server, APIs externas (Discogs/IGDB), IA
-│   └── PergamonLens.Web/             # ASP.NET Core Web API + Frontend Web Responsive
+│   ├── PergamonLens.Infrastructure/  # EF Core, SQL Server, Identity, APIs externas (Discogs), IA
+│   └── PergamonLens.Web/             # ASP.NET Core Minimal APIs + Frontend Web Responsive
 ├── tests/
 │   ├── PergamonLens.UnitTests/       # Pruebas unitarias de dominio y casos de uso
-│   └── PergamonLens.IntegrationTests/# Pruebas de integración con Testcontainers
+│   └── PergamonLens.IntegrationTests/# Pruebas de integración con SQL Server real
 └── docker/
     └── docker-compose.yml            # Orquestación de App + SQL Server
 ```
@@ -51,6 +51,7 @@ PergamonLens/
   - **Aggregate Root Polivalente (`MusicRelease`):** Modela lanzamientos musicales físicos en múltiples formatos (`MediaFormat`: Vinilo, CD, Casete y Box Set), controlando el inventario de pistas (`Track`), graduación oficial Goldmine (`MediaCondition`) y especificaciones físicas (pulgadas, RPM, número de soportes).
   - **Value Objects con Validación Estricta:** Inmutabilidad y blindaje contra *Primitive Obsession* (`Barcode` con cálculo y validación de checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
   - **Eventos de Dominio:** Desacoplamiento total para disparar acciones reactivas asíncronas (`MusicReleaseCreatedEvent`, `MusicReleaseEnrichedEvent`, etc.).
+- **Seguridad & Aislamiento Multi-usuario:** Modelo multi-coleccionista donde cada lanzamiento pertenece estrictamente a su propietario (`UserId`). Aislamiento garantizado en base de datos mediante *Global Query Filters* de EF Core contra vulnerabilidades de acceso cruzado (OWASP BOLA/IDOR). Autenticación de serie con ASP.NET Core Identity API Endpoints (PBKDF2 con sal, tokens criptográficos, bloqueo por fuerza bruta y recuperación segura a coste cero de licencias).
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
 - **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
 - **Persistencia Robusta:** **Microsoft SQL Server** con **Entity Framework Core**, migraciones automatizadas e índices optimizados para búsqueda de colecciones.
@@ -65,6 +66,7 @@ PergamonLens/
 | **Backend Core** | **.NET 10 / C#** | Alto rendimiento, sintaxis moderna y tipado estricto. |
 | **Base de Datos** | **Microsoft SQL Server** | Almacenamiento relacional transaccional y robusto. |
 | **ORM & Migraciones** | **Entity Framework Core** | Mapeo objeto-relacional y control de esquemas. |
+| **Seguridad & Identidad** | **ASP.NET Core Identity** | Autenticación REST nativa, hash PBKDF2 y sesiones sin coste externo. |
 | **Motor de Visión / IA** | **Multimodal Vision API** | Extracción de metadatos de imágenes de portadas y lomos. |
 | **APIs Externas** | **Discogs, OpenLibrary, IGDB** | Enriquecimiento canónico de música, libros y videojuegos. |
 | **Frontend Web** | **Web Responsive / PWA** | Interfaz optimizada para móvil con acceso directo a cámara. |
@@ -97,8 +99,10 @@ PergamonLens/
   - Cliente HTTP resiliente para Discogs API con Polly (`AddStandardResilienceHandler`).
   - Procesamiento asíncrono en segundo plano mediante `System.Threading.Channels` y `BackgroundService`.
   - Suite de **106 tests** (102 unitarios + 4 de integración con SQL Server) al 100% en verde.
-- [ ] **Hito 5: Capa Web / Minimal APIs & Interfaz Móvil**
-  - Endpoints RESTful en ASP.NET Core con OpenAPI.
+- [ ] **Hito 5: Capa Web, Identidad & Interfaz Móvil**
+  - Soporte multi-usuario con *Global Query Filters* en EF Core y pertenencia de lanzamientos (`UserId`).
+  - Endpoints de autenticación REST con ASP.NET Core Identity (`/auth/register`, `/auth/login`, recuperación de contraseña).
+  - Endpoints RESTful de catálogo en Minimal APIs protegidos con autorización (`[Authorize]`).
   - Frontend Web responsive optimizado para móvil con captura directa de cámara nativa.
 - [ ] **Hito 6: Testing de Integración & CI/CD**
   - Tests de integración con Testcontainers MSSQL.
@@ -110,7 +114,7 @@ PergamonLens/
 
 ### Requisitos Previos
 - [.NET 10 SDK](https://dotnet.microsoft.com/)
-- [Docker Desktop](https://www.docker.com/) (para levantar SQL Server local)
+- [Docker Desktop](https://www.docker.com/) o SQL Server LocalDB (para base de datos local)
 
 ### Pasos
 1. Clonar el repositorio:
