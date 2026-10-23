@@ -15,3 +15,8 @@
 .gitignore text eol=lf
 .gitattributes text eol=lf
 .editorconfig text eol=lf
+
+# Web and frontend assets
+*.html text eol=crlf
+*.css text eol=crlf
+*.js text eol=crlf
