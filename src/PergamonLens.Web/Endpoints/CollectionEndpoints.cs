@@ -30,3 +30,4 @@ public static class CollectionEndpoints
         return app;
     }
 }
+

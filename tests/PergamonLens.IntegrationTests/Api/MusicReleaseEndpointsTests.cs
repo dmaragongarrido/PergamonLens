@@ -209,3 +209,4 @@ public class MusicReleaseEndpointsTests : IClassFixture<WebApplicationFactory<Pr
         stats!.TotalReleases.Should().BeGreaterThanOrEqualTo(1);
     }
 }
+

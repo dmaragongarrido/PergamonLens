@@ -180,3 +180,4 @@ public sealed record ConfirmReleaseRequest(
 
 public sealed record EnrichReleaseRequest(
     long DiscogsReleaseId);
+

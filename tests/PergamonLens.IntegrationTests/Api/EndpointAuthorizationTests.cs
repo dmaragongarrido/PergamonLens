@@ -54,3 +54,4 @@ public class EndpointAuthorizationTests : IClassFixture<WebApplicationFactory<Pr
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }
+
