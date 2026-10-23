@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Application.MusicReleases.Commands.ScanRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
@@ -12,6 +13,7 @@ public class ScanReleaseCommandTests
 {
     private readonly Mock<IVisionService> _visionServiceMock;
     private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly ScanReleaseCommandHandler _handler;
     private readonly ScanReleaseCommandValidator _validator;
 
@@ -19,7 +21,10 @@ public class ScanReleaseCommandTests
     {
         _visionServiceMock = new Mock<IVisionService>();
         _repositoryMock = new Mock<IMusicReleaseRepository>();
-        _handler = new ScanReleaseCommandHandler(_visionServiceMock.Object, _repositoryMock.Object);
+        _currentUserServiceMock = new Mock<ICurrentUserService>();
+        _currentUserServiceMock.Setup(s => s.UserId).Returns("default-test-user");
+
+        _handler = new ScanReleaseCommandHandler(_visionServiceMock.Object, _repositoryMock.Object, _currentUserServiceMock.Object);
         _validator = new ScanReleaseCommandValidator();
     }
 
@@ -53,9 +58,11 @@ public class ScanReleaseCommandTests
         result.CatalogueNumber.Should().Be("AS-77");
         result.Label.Should().Be("Impulse!");
         result.Status.Should().Be("Identified");
+        result.UserId.Should().Be("default-test-user");
 
         _repositoryMock.Verify(r => r.AddAsync(It.Is<MusicRelease>(m =>
             m.Title == "A Love Supreme" &&
+            m.UserId.Value == "default-test-user" &&
             m.Status == ProcessingStatus.Identified), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -84,9 +91,11 @@ public class ScanReleaseCommandTests
         // Assert
         result.Status.Should().Be("Failed");
         result.Notes.Should().Contain("Error");
+        result.UserId.Should().Be("default-test-user");
 
         _repositoryMock.Verify(r => r.AddAsync(It.Is<MusicRelease>(m =>
-            m.Status == ProcessingStatus.Failed), It.IsAny<CancellationToken>()), Times.Once);
+            m.Status == ProcessingStatus.Failed &&
+            m.UserId.Value == "default-test-user"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -104,4 +113,3 @@ public class ScanReleaseCommandTests
         result.Errors.Should().Contain(e => e.PropertyName == "ContentType");
     }
 }
-

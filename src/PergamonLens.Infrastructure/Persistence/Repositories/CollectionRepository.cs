@@ -25,10 +25,12 @@ public sealed class CollectionRepository : ICollectionRepository
         var pendingAnalysisReleases = await _context.MusicReleases.CountAsync(r => r.Status == ProcessingStatus.PendingAnalysis, cancellationToken);
         var enrichedReleases = await _context.MusicReleases.CountAsync(r => r.Status == ProcessingStatus.Enriched, cancellationToken);
 
-        var totalTracks = await _context.Tracks.CountAsync(cancellationToken);
+        // Los tracks se consultan a través de MusicReleases para heredar el filtro global multi-usuario
+        var totalTracks = await _context.MusicReleases.SelectMany(r => r.Tracks).CountAsync(cancellationToken);
 
         // Duración estimada total acumulada
-        var durations = await _context.Tracks
+        var durations = await _context.MusicReleases
+            .SelectMany(r => r.Tracks)
             .Where(t => t.Duration != null)
             .Select(t => t.Duration!.Value)
             .ToListAsync(cancellationToken);

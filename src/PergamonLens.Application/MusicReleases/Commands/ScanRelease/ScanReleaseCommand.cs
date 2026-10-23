@@ -11,5 +11,5 @@ namespace PergamonLens.Application.MusicReleases.Commands.ScanRelease;
 public sealed record ScanReleaseCommand(
     Stream ImageStream,
     string ContentType,
-    MediaFormat Format = MediaFormat.Vinyl) : IRequest<MusicReleaseDto>;
-
+    MediaFormat Format = MediaFormat.Vinyl,
+    string? UserId = null) : IRequest<MusicReleaseDto>;

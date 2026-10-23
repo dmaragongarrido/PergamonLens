@@ -9,14 +9,14 @@ namespace PergamonLens.Domain.Events;
 /// </summary>
 public sealed record MusicReleaseCreatedEvent(
     MusicReleaseId MusicReleaseId,
+    UserId UserId,
     string Title,
     string Artist,
     MediaFormat Format,
     DateTime OccurredOnUtc) : IDomainEvent
 {
-    public MusicReleaseCreatedEvent(MusicReleaseId musicReleaseId, string title, string artist, MediaFormat format)
-        : this(musicReleaseId, title, artist, format, DateTime.UtcNow)
+    public MusicReleaseCreatedEvent(MusicReleaseId musicReleaseId, UserId userId, string title, string artist, MediaFormat format)
+        : this(musicReleaseId, userId, title, artist, format, DateTime.UtcNow)
     {
     }
 }
-

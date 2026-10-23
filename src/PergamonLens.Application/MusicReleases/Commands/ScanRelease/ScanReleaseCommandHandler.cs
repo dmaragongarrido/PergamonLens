@@ -1,4 +1,5 @@
 using MediatR;
+using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Application.DTOs;
 using PergamonLens.Application.Mappings;
 using PergamonLens.Domain.Entities;
@@ -15,17 +16,31 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
 {
     private readonly IVisionService _visionService;
     private readonly IMusicReleaseRepository _repository;
+    private readonly ICurrentUserService _currentUserService;
 
     public ScanReleaseCommandHandler(
         IVisionService visionService,
-        IMusicReleaseRepository repository)
+        IMusicReleaseRepository repository,
+        ICurrentUserService currentUserService)
     {
         _visionService = visionService;
         _repository = repository;
+        _currentUserService = currentUserService;
     }
 
     public async Task<MusicReleaseDto> Handle(ScanReleaseCommand request, CancellationToken cancellationToken)
     {
+        var rawUserId = !string.IsNullOrWhiteSpace(request.UserId)
+            ? request.UserId
+            : _currentUserService.UserId;
+
+        if (string.IsNullOrWhiteSpace(rawUserId))
+        {
+            throw new UnauthorizedAccessException("Se requiere un usuario autenticado para registrar un lanzamiento musical.");
+        }
+
+        var userId = UserId.From(rawUserId);
+
         var extraction = await _visionService.AnalyzeImageAsync(
             request.ImageStream,
             request.ContentType,
@@ -54,6 +69,7 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
             : "Artista desconocido";
 
         var release = MusicRelease.Create(
+            userId,
             title,
             artist,
             request.Format,
@@ -86,4 +102,3 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         return release.ToDto();
     }
 }
-

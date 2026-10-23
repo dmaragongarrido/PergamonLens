@@ -13,11 +13,13 @@ public class MappingTests
     public void MusicRelease_ToDto_ShouldMapAllFieldsAccurately()
     {
         // Arrange
+        var userId = UserId.From("user-beatles");
         var barcode = Barcode.Create("4006381333931");
         var catNum = CatalogueNumber.Create("PCS 7027");
         var year = ReleaseYear.Create(1967);
 
         var release = MusicRelease.Create(
+            userId,
             "Sgt. Pepper's Lonely Hearts Club Band",
             "The Beatles",
             MediaFormat.Vinyl,
@@ -42,6 +44,7 @@ public class MappingTests
         // Assert
         dto.Should().NotBeNull();
         dto.Id.Should().Be(release.Id.Value);
+        dto.UserId.Should().Be("user-beatles");
         dto.Title.Should().Be("Sgt. Pepper's Lonely Hearts Club Band");
         dto.Artist.Should().Be("The Beatles");
         dto.Format.Should().Be("Vinyl");
@@ -163,4 +166,3 @@ public class MappingTests
         dto.RawTextDetected.Should().Contain("ABBEY ROAD");
     }
 }
-

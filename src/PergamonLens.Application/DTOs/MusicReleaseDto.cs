@@ -5,6 +5,7 @@ namespace PergamonLens.Application.DTOs;
 /// </summary>
 public sealed record MusicReleaseDto(
     Guid Id,
+    string UserId,
     string Format,
     string Title,
     string Artist,
@@ -25,4 +26,3 @@ public sealed record MusicReleaseDto(
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc,
     IReadOnlyList<TrackDto> Tracks);
-

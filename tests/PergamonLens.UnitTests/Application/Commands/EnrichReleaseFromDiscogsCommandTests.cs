@@ -29,7 +29,7 @@ public class EnrichReleaseFromDiscogsCommandTests
     public async Task Handle_WhenReleaseAndDiscogsFound_ShouldEnrichAndReturnDto()
     {
         // Arrange
-        var release = MusicRelease.Create("Abbey Road", "The Beatles", MediaFormat.Vinyl);
+        var release = MusicRelease.Create(UserId.New(), "Abbey Road", "The Beatles", MediaFormat.Vinyl);
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -97,7 +97,7 @@ public class EnrichReleaseFromDiscogsCommandTests
     public async Task Handle_WhenDiscogsDetailsNotFound_ShouldThrowNotFoundException()
     {
         // Arrange
-        var release = MusicRelease.Create("Abbey Road", "The Beatles");
+        var release = MusicRelease.Create(UserId.New(), "Abbey Road", "The Beatles");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -131,4 +131,3 @@ public class EnrichReleaseFromDiscogsCommandTests
         result.IsValid.Should().BeFalse();
     }
 }
-

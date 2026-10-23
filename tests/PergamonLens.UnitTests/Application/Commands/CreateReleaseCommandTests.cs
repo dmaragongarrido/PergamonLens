@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
@@ -10,13 +11,17 @@ namespace PergamonLens.UnitTests.Application.Commands;
 public class CreateReleaseCommandTests
 {
     private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly CreateReleaseCommandHandler _handler;
     private readonly CreateReleaseCommandValidator _validator;
 
     public CreateReleaseCommandTests()
     {
         _repositoryMock = new Mock<IMusicReleaseRepository>();
-        _handler = new CreateReleaseCommandHandler(_repositoryMock.Object);
+        _currentUserServiceMock = new Mock<ICurrentUserService>();
+        _currentUserServiceMock.Setup(s => s.UserId).Returns("default-test-user");
+
+        _handler = new CreateReleaseCommandHandler(_repositoryMock.Object, _currentUserServiceMock.Object);
         _validator = new CreateReleaseCommandValidator();
     }
 
@@ -50,10 +55,12 @@ public class CreateReleaseCommandTests
         result.CatalogueNumber.Should().Be("SHVL 804");
         result.ReleaseYear.Should().Be(1973);
         result.DiscsCount.Should().Be(1);
+        result.UserId.Should().Be("default-test-user");
 
         _repositoryMock.Verify(r => r.AddAsync(It.Is<MusicRelease>(m =>
             m.Title == "The Dark Side of the Moon" &&
             m.Artist == "Pink Floyd" &&
+            m.UserId.Value == "default-test-user" &&
             m.Barcode != null && m.Barcode.Value == "5099902987613"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -109,4 +116,3 @@ public class CreateReleaseCommandTests
         result.Errors.Should().Contain(e => e.PropertyName == "ReleaseYear");
     }
 }
-

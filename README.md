@@ -52,6 +52,9 @@ PergamonLens/
   - **Value Objects con Validación Estricta:** Inmutabilidad y blindaje contra *Primitive Obsession* (`Barcode` con cálculo y validación de checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
   - **Eventos de Dominio:** Desacoplamiento total para disparar acciones reactivas asíncronas (`MusicReleaseCreatedEvent`, `MusicReleaseEnrichedEvent`, etc.).
 - **Seguridad & Aislamiento Multi-usuario:** Modelo multi-coleccionista donde cada lanzamiento pertenece estrictamente a su propietario (`UserId`). Aislamiento garantizado en base de datos mediante *Global Query Filters* de EF Core contra vulnerabilidades de acceso cruzado (OWASP BOLA/IDOR). Autenticación de serie con ASP.NET Core Identity API Endpoints (PBKDF2 con sal, tokens criptográficos, bloqueo por fuerza bruta y recuperación segura a coste cero de licencias).
+- **Pipeline de Visión e IA Multimodal (Estrategia Híbrida de Inferencia):**
+  - **Fase 1 (Algoritmo Determinista Local, 0 coste, <2 ms):** Decodificación algorítmica local en memoria de códigos de barras (EAN-13, UPC) con `ZXing.Net` para catalogación instantánea sin consumo de tokens de IA.
+  - **Fase 2 (Visión Multimodal con Inferencia Estructurada):** Modelo multimodal de alta velocidad (**Google Gemini 2.0 Flash / 1.5 Flash**) vía Google AI Studio (Tier gratuito permanente, 0,00 € de infraestructura) con *Structured Outputs* (JSON Schema estricto) y capacidad de reconocimiento cultural de portadas icónicas sin texto. Soporte alternativo desacoplado para inferencia 100% privada y offline con modelos locales (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) mediante el contrato [`IVisionService`](file:///src/PergamonLens.Domain/Services/IVisionService.cs).
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
 - **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
 - **Persistencia Robusta:** **Microsoft SQL Server** con **Entity Framework Core**, migraciones automatizadas e índices optimizados para búsqueda de colecciones.
@@ -67,7 +70,7 @@ PergamonLens/
 | **Base de Datos** | **Microsoft SQL Server** | Almacenamiento relacional transaccional y robusto. |
 | **ORM & Migraciones** | **Entity Framework Core** | Mapeo objeto-relacional y control de esquemas. |
 | **Seguridad & Identidad** | **ASP.NET Core Identity** | Autenticación REST nativa, hash PBKDF2 y sesiones sin coste externo. |
-| **Motor de Visión / IA** | **Multimodal Vision API** | Extracción de metadatos de imágenes de portadas y lomos. |
+| **Motor de Visión / IA** | **Gemini 2.0 Flash / Llama 3.2 Vision** | Inferencia multimodal estructurada (JSON) + OCR determinista local. |
 | **APIs Externas** | **Discogs, OpenLibrary, IGDB** | Enriquecimiento canónico de música, libros y videojuegos. |
 | **Frontend Web** | **Web Responsive / PWA** | Interfaz optimizada para móvil con acceso directo a cámara. |
 | **Testing** | **xUnit, FluentAssertions, Moq** | Cobertura exhaustiva de lógica de negocio y casos de uso. |

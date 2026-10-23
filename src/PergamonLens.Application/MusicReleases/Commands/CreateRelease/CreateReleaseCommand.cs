@@ -5,7 +5,7 @@ using PergamonLens.Domain.Enums;
 namespace PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 
 /// <summary>
-/// Comando para crear manualmente un lanzamiento musical en el catálogo.
+/// Comando para crear manualmente un lanzamiento musical en el catálogo del usuario.
 /// </summary>
 public sealed record CreateReleaseCommand(
     string Title,
@@ -20,5 +20,5 @@ public sealed record CreateReleaseCommand(
     string? Label = null,
     string? Country = null,
     string? CoverImageUrl = null,
-    string? Notes = null) : IRequest<MusicReleaseDto>;
-
+    string? Notes = null,
+    string? UserId = null) : IRequest<MusicReleaseDto>;

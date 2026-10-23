@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.ValueObjects;
@@ -10,10 +11,12 @@ namespace PergamonLens.IntegrationTests.Persistence;
 
 public class MusicReleaseRepositoryIntegrationTests : IDisposable
 {
+    private readonly DbContextOptions<PergamonLensDbContext> _options;
     private readonly PergamonLensDbContext _context;
     private readonly MusicReleaseRepository _repository;
     private readonly CollectionRepository _collectionRepository;
     private readonly List<MusicReleaseId> _createdIds = [];
+    private readonly UserId _testUserId = UserId.New();
 
     public MusicReleaseRepositoryIntegrationTests()
     {
@@ -24,11 +27,11 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
         string connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
             ?? defaultConnection;
 
-        var options = new DbContextOptionsBuilder<PergamonLensDbContext>()
+        _options = new DbContextOptionsBuilder<PergamonLensDbContext>()
             .UseSqlServer(connectionString)
             .Options;
 
-        _context = new PergamonLensDbContext(options);
+        _context = new PergamonLensDbContext(_options);
         _context.Database.EnsureCreated();
 
         _repository = new MusicReleaseRepository(_context);
@@ -44,6 +47,7 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
         var year = ReleaseYear.Create(1975);
 
         var release = MusicRelease.Create(
+            _testUserId,
             "Integration Test Album",
             "SQL Server Artist",
             MediaFormat.Vinyl,
@@ -69,6 +73,7 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
 
         retrieved.Should().NotBeNull();
         retrieved!.Id.Should().Be(release.Id);
+        retrieved.UserId.Should().Be(_testUserId);
         retrieved.Title.Should().Be("Integration Test Album");
         retrieved.Artist.Should().Be("SQL Server Artist");
         retrieved.Barcode.Should().NotBeNull();
@@ -84,6 +89,7 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
     {
         // Arrange
         var release = MusicRelease.Create(
+            _testUserId,
             "Distinctive Echoes",
             "Unique Band Name",
             MediaFormat.CD);
@@ -103,7 +109,7 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
     public async Task DeleteAsync_ShouldRemoveReleaseAndCascadeDeleteTracks()
     {
         // Arrange
-        var release = MusicRelease.Create("To Be Deleted", "Ephemeral Artist");
+        var release = MusicRelease.Create(_testUserId, "To Be Deleted", "Ephemeral Artist");
         release.AddTrack(Track.Create("A1", "Doomed Track"));
 
         await _repository.AddAsync(release);
@@ -122,6 +128,60 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
         orphanTracks.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task MultiUserIsolation_WhenQueryingOtherUserCollection_ShouldEnforceStrictDataIsolation()
+    {
+        // Arrange: Dos usuarios distintos con sus respectivos identificadores
+        var userA = UserId.New();
+        var userB = UserId.New();
+
+        var releaseUserA = MusicRelease.Create(userA, "Album User A", "Artist A", MediaFormat.Vinyl);
+        var releaseUserB = MusicRelease.Create(userB, "Album User B", "Artist B", MediaFormat.CD);
+
+        _createdIds.Add(releaseUserA.Id);
+        _createdIds.Add(releaseUserB.Id);
+
+        // Persistimos ambos usando el contexto sin filtro de sistema
+        await _repository.AddAsync(releaseUserA);
+        await _repository.AddAsync(releaseUserB);
+
+        // Simulamos contexto HTTP para Usuario A
+        var serviceA = new TestCurrentUserService(userA.Value);
+        using var contextUserA = new PergamonLensDbContext(_options, serviceA);
+        var repoUserA = new MusicReleaseRepository(contextUserA);
+
+        // Simulamos contexto HTTP para Usuario B
+        var serviceB = new TestCurrentUserService(userB.Value);
+        using var contextUserB = new PergamonLensDbContext(_options, serviceB);
+        var repoUserB = new MusicReleaseRepository(contextUserB);
+
+        // Act & Assert:
+        // 1. Usuario A puede ver su álbum pero NO el de Usuario B
+        var foundByA = await repoUserA.GetByIdAsync(releaseUserA.Id);
+        var unauthorizedByA = await repoUserA.GetByIdAsync(releaseUserB.Id);
+
+        foundByA.Should().NotBeNull();
+        foundByA!.Title.Should().Be("Album User A");
+        unauthorizedByA.Should().BeNull(); // BOLA / IDOR mitigation: retorna null
+
+        // 2. Usuario B puede ver su álbum pero NO el de Usuario A
+        var foundByB = await repoUserB.GetByIdAsync(releaseUserB.Id);
+        var unauthorizedByB = await repoUserB.GetByIdAsync(releaseUserA.Id);
+
+        foundByB.Should().NotBeNull();
+        foundByB!.Title.Should().Be("Album User B");
+        unauthorizedByB.Should().BeNull();
+
+        // 3. Búsqueda y colecciones aisladas
+        var userAReleases = await repoUserA.GetAllAsync();
+        userAReleases.Should().Contain(r => r.Id == releaseUserA.Id);
+        userAReleases.Should().NotContain(r => r.Id == releaseUserB.Id);
+
+        var userBReleases = await repoUserB.GetAllAsync();
+        userBReleases.Should().Contain(r => r.Id == releaseUserB.Id);
+        userBReleases.Should().NotContain(r => r.Id == releaseUserA.Id);
+    }
+
     public void Dispose()
     {
         if (_createdIds.Count > 0)
@@ -138,5 +198,11 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
         }
 
         _context.Dispose();
+    }
+
+    private sealed class TestCurrentUserService(string userId) : ICurrentUserService
+    {
+        public string? UserId => userId;
+        public bool IsAuthenticated => true;
     }
 }
