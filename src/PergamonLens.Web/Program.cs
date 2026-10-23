@@ -17,6 +17,12 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+// Configuración de serialización JSON con soporte para Enums en formato string
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
+
 // Registro de servicios de las capas de Clean Architecture
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -52,6 +58,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors();
 
+// Habilitar archivos estáticos para la interfaz Web / PWA
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -65,13 +75,22 @@ app.MapMusicReleaseEndpoints();
 app.MapCollectionEndpoints();
 app.MapDiscogsEndpoints();
 
-app.MapGet("/", () => Results.Ok(new
+// Root endpoint: Redirige al navegador a la interfaz Web o devuelve JSON de estado para APIs/Tests
+app.MapGet("/", (HttpContext context) =>
 {
-    Application = "PergamonLens API",
-    Version = "1.0.0",
-    Status = "Healthy",
-    Timestamp = DateTime.UtcNow
-}));
+    if (context.Request.Headers.Accept.ToString().Contains("text/html"))
+    {
+        return Results.Redirect("/index.html");
+    }
+
+    return Results.Ok(new
+    {
+        Application = "PergamonLens API",
+        Version = "1.0.0",
+        Status = "Healthy",
+        Timestamp = DateTime.UtcNow
+    });
+});
 
 app.Run();
 
