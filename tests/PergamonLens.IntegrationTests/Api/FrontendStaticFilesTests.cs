@@ -88,3 +88,4 @@ public class FrontendStaticFilesTests : IClassFixture<WebApplicationFactory<Prog
         js.Should().Contain("apiFetch");
     }
 }
+
