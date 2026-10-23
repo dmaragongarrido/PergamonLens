@@ -52,9 +52,11 @@ PergamonLens/
   - **Value Objects con Validación Estricta:** Inmutabilidad y blindaje contra *Primitive Obsession* (`Barcode` con cálculo y validación de checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
   - **Eventos de Dominio:** Desacoplamiento total para disparar acciones reactivas asíncronas (`MusicReleaseCreatedEvent`, `MusicReleaseEnrichedEvent`, etc.).
 - **Seguridad & Aislamiento Multi-usuario:** Modelo multi-coleccionista donde cada lanzamiento pertenece estrictamente a su propietario (`UserId`). Aislamiento garantizado en base de datos mediante *Global Query Filters* de EF Core contra vulnerabilidades de acceso cruzado (OWASP BOLA/IDOR). Autenticación de serie con ASP.NET Core Identity API Endpoints (PBKDF2 con sal, tokens criptográficos, bloqueo por fuerza bruta y recuperación segura a coste cero de licencias).
-- **Pipeline de Visión e IA Multimodal (Estrategia Híbrida de Inferencia):**
-  - **Fase 1 (Algoritmo Determinista Local, 0 coste, <2 ms):** Decodificación algorítmica local en memoria de códigos de barras (EAN-13, UPC) con `ZXing.Net` para catalogación instantánea sin consumo de tokens de IA.
-  - **Fase 2 (Visión Multimodal con Inferencia Estructurada):** Modelo multimodal de alta velocidad (**Google Gemini 2.0 Flash / 1.5 Flash**) vía Google AI Studio (Tier gratuito permanente, 0,00 € de infraestructura) con *Structured Outputs* (JSON Schema estricto) y capacidad de reconocimiento cultural de portadas icónicas sin texto. Soporte alternativo desacoplado para inferencia 100% privada y offline con modelos locales (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) mediante el contrato [`IVisionService`](file:///src/PergamonLens.Domain/Services/IVisionService.cs).
+- **Pipeline de Visión e IA Multimodal (Estrategia Híbrida de Inferencia & Resiliencia):**
+  - **Fase 1 (Escudo Anti-Cuota Determinista Local, 0 coste, <2 ms):** Decodificación algorítmica local en memoria de códigos de barras (EAN-13, UPC) con `ZXing.Net`. El 95% de los vinilos modernos y CDs se identifican instantáneamente sin consumir tokens de IA ni enviar peticiones a la nube.
+  - **Fase 2 (Visión Multimodal con Inferencia Estructurada):** Modelo de alta velocidad (**Google Gemini 2.0 Flash / 1.5 Flash**) vía Google AI Studio (Tier gratuito permanente de 15 RPM y 1.500 peticiones diarias sin tarjeta) con *Structured Outputs* (JSON Schema estricto) y capacidad de reconocimiento cultural de portadas icónicas sin texto.
+  - **Resiliencia & Rate Limiting (Polly):** Políticas de reintento exponencial con *jitter* ante posibles errores `429 Too Many Requests`, limitador de tasa interno (*Rate Limiter*) y degradación elegante (*Graceful Degradation*) a estado `PendingAnalysis` o entrada manual si la red falla.
+  - **Privacidad & Offline (Ollama Fallback):** Soporte alternativo 100% desacoplado mediante el contrato [`IVisionService`](file:///src/PergamonLens.Domain/Services/IVisionService.cs) para inferencia local y privada con modelos *open source* (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) sin depender de proveedores cloud externos.
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
 - **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
 - **Persistencia Robusta:** **Microsoft SQL Server** con **Entity Framework Core**, migraciones automatizadas e índices optimizados para búsqueda de colecciones.
@@ -102,12 +104,18 @@ PergamonLens/
   - Cliente HTTP resiliente para Discogs API con Polly (`AddStandardResilienceHandler`).
   - Procesamiento asíncrono en segundo plano mediante `System.Threading.Channels` y `BackgroundService`.
   - Suite de **106 tests** (102 unitarios + 4 de integración con SQL Server) al 100% en verde.
-- [ ] **Hito 5: Capa Web, Identidad & Interfaz Móvil**
+- [x] **Hito 5: Capa Web, Identidad & Interfaz Móvil**
   - Soporte multi-usuario con *Global Query Filters* en EF Core y pertenencia de lanzamientos (`UserId`).
   - Endpoints de autenticación REST con ASP.NET Core Identity (`/auth/register`, `/auth/login`, recuperación de contraseña).
   - Endpoints RESTful de catálogo en Minimal APIs protegidos con autorización (`[Authorize]`).
-  - Frontend Web responsive optimizado para móvil con captura directa de cámara nativa.
-- [ ] **Hito 6: Testing de Integración & CI/CD**
+  - Frontend Web responsive SPA servida en `wwwroot` optimizada para móvil con captura WebRTC y cámara nativa.
+  - Suite de **135 tests** (115 unitarios + 20 de integración) pasando al 100% en verde.
+- [ ] **Hito 6: Motor de Visión & IA Multimodal (Google Gemini 2.0 Flash + ZXing.Net)**
+  - Decodificador local determinista en memoria de códigos de barras (EAN-13, UPC) a coste cero de tokens (`ZXing.Net`).
+  - Cliente HTTP resiliente con Polly para la API de Google Gemini 2.0 Flash con Structured Outputs (JSON Schema).
+  - Gestión segura de API Key mediante `.NET User Secrets` y variables de entorno.
+  - Pipeline de inferencia visual en dos fases y pruebas unitarias con simulación de respuestas multimodales.
+- [ ] **Hito 7: Testing de Integración con Testcontainers MSSQL & CI/CD**
   - Tests de integración con Testcontainers MSSQL.
   - Pipeline automatizado de GitHub Actions (build + tests en cada Pull Request).
 
