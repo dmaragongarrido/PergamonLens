@@ -3,6 +3,8 @@ using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Infrastructure;
 using PergamonLens.Infrastructure.Identity;
 using PergamonLens.Infrastructure.Persistence;
+using PergamonLens.Web.Endpoints;
+using PergamonLens.Web.Infrastructure;
 using PergamonLens.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,9 +13,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+// Manejo Global de Excepciones y ProblemDetails (RFC 7807)
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 // Registro de servicios de las capas de Clean Architecture
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// CORS para acceso desde frontend / PWA móvil
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 // ASP.NET Core Identity & Autorización
 builder.Services.AddAuthentication();
@@ -25,12 +42,15 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -39,6 +59,11 @@ app.UseAuthorization();
 app.MapGroup("/auth")
     .MapIdentityApi<ApplicationUser>()
     .WithTags("Authentication");
+
+// Endpoints de catálogo y casos de uso de la colección
+app.MapMusicReleaseEndpoints();
+app.MapCollectionEndpoints();
+app.MapDiscogsEndpoints();
 
 app.MapGet("/", () => Results.Ok(new
 {
