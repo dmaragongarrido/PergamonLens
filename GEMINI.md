@@ -16,16 +16,16 @@ Este archivo se carga automáticamente en el contexto de G al abrir el espacio d
 - **Patrón:** Clean Architecture / principios DDD (separación estricta de responsabilidades).
   - `PergamonLens.Domain`: Cero dependencias externas. Entidades ricas, Value Objects, eventos de dominio.
   - `PergamonLens.Application`: Casos de uso (CQRS / Mediador), DTOs, validaciones, interfaces de abstracción.
-  - `PergamonLens.Infrastructure`: EF Core, SQL Server, clientes externos (Discogs API, Vision AI), colas en segundo plano (`System.Threading.Channels`), resiliencia con Polly, ASP.NET Core Identity.
+  - `PergamonLens.Infrastructure`: EF Core, PostgreSQL (Npgsql), clientes externos (Discogs API, Vision AI), colas en segundo plano (`System.Threading.Channels`), resiliencia con Polly, ASP.NET Core Identity.
   - `PergamonLens.Web`: ASP.NET Core Minimal APIs / Web API + UI responsive adaptada a móvil (acceso a cámara).
 - **Aislamiento Multi-usuario & Seguridad (OWASP / Anti-BOLA):** Todo lanzamiento (`MusicRelease`) pertenece estrictamente a un propietario (`UserId`). En la persistencia se aplican obligatoriamente *Global Query Filters* en EF Core (`WHERE UserId = @currentUserId`) para garantizar el aislamiento estricto e inviolable entre colecciones de usuarios.
-- **Identidad & Autenticación:** Basado en el estándar nativo de código abierto *ASP.NET Core Identity* sobre SQL Server (`MapIdentityApi`), hash PBKDF2/Argon2 con sal, tokens criptográficos y reseteo seguro sin costes de infraestructura ni servicios externos de pago.
+- **Identidad & Autenticación:** Basado en el estándar nativo de código abierto *ASP.NET Core Identity* sobre PostgreSQL (`MapIdentityApi`), hash PBKDF2/Argon2 con sal, tokens criptográficos y reseteo seguro sin costes de infraestructura ni servicios externos de pago.
 - **Motor de Visión e IA Multimodal (Estrategia Híbrida 0,00 €):**
   - Abstracción desacoplada en Dominio mediante `IVisionService`.
   - Pipeline de dos fases: Fase 1 determinista local en memoria para códigos de barras (`ZXing.Net`, ~2 ms, 0 tokens) + Fase 2 de inferencia multimodal con **Google Gemini 2.0 Flash / 1.5 Flash** (Google AI Studio, tier gratuito permanente de 15 RPM sin tarjeta, Structured Outputs con JSON Schema estricto y reconocimiento iconográfico de portadas sin texto).
   - Soporte alternativo para privacidad total y uso offline con modelos open-source (**Llama 3.2 Vision / Qwen2-VL** vía Ollama).
-- **Persistencia:** Microsoft SQL Server (vía LocalDB en desarrollo Windows y contenedor Docker `mcr.microsoft.com/mssql/server:2022-latest`) con migraciones Code-First de EF Core.
-- **Testing:** xUnit, FluentAssertions, Moq, Testcontainers para integración.
+- **Persistencia:** PostgreSQL 16 (vía contenedor Docker ultraligero `postgres:16-alpine`, ~40 MB RAM) con migraciones Code-First de EF Core.
+- **Testing:** xUnit, FluentAssertions, Moq, Testcontainers PostgreSQL para integración.
 
 ---
 

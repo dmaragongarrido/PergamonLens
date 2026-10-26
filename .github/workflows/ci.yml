@@ -12,18 +12,19 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
+      postgres:
+        image: postgres:16-alpine
         env:
-          ACCEPT_EULA: "Y"
-          MSSQL_SA_PASSWORD: "YourStrong@Passw0rd!"
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: PergamonLensDb
         ports:
-          - 1433:1433
+          - 5432:5432
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"YourStrong@Passw0rd!\" -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"YourStrong@Passw0rd!\" -Q \"SELECT 1\""
-          --health-interval 10s
+          --health-cmd "pg_isready -U postgres -d PergamonLensDb"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 5
 
     steps:
       - name: 📥 Check out repository
@@ -40,7 +41,7 @@ jobs:
       - name: 🔨 Build solution
         run: dotnet build PergamonLens.slnx --no-restore --configuration Release
 
-      - name: 🧪 Run tests (Unit + Integration with SQL Server 2022)
+      - name: 🧪 Run tests (Unit + Integration with PostgreSQL)
         env:
-          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=PergamonLensDb;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=true"
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=PergamonLensDb;Username=postgres;Password=postgres"
         run: dotnet test PergamonLens.slnx --no-build --configuration Release --verbosity normal
