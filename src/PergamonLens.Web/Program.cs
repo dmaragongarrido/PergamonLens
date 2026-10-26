@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using PergamonLens.Application;
 using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Infrastructure;
@@ -47,6 +48,13 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Aplicar migraciones pendientes de base de datos automáticamente al arrancar
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<PergamonLensDbContext>();
+    dbContext.Database.Migrate();
+}
 
 app.UseExceptionHandler();
 

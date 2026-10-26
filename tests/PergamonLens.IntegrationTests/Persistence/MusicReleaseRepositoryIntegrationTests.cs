@@ -30,7 +30,7 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
             .Options;
 
         _context = new PergamonLensDbContext(_options);
-        _context.Database.EnsureCreated();
+        _context.Database.Migrate();
 
         _repository = new MusicReleaseRepository(_context);
         _collectionRepository = new CollectionRepository(_context);
