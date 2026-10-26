@@ -1,24 +1,23 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: pergamonlens-sqlserver
+  postgres:
+    image: postgres:16-alpine
+    container_name: pergamonlens-postgres
     restart: unless-stopped
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd!"
-      MSSQL_PID: "Developer"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: PergamonLensDb
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - mssql_data:/var/opt/mssql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"YourStrong@Passw0rd!\" -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"YourStrong@Passw0rd!\" -Q \"SELECT 1\""]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d PergamonLensDb"]
+      interval: 5s
+      timeout: 3s
       retries: 5
-      start_period: 15s
+      start_period: 5s
 
 volumes:
-  mssql_data:
+  postgres_data:
     driver: local
-

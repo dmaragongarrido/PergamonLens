@@ -22,18 +22,18 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // 1. Persistencia: SQL Server & EF Core
+        // 1. Persistencia: PostgreSQL & EF Core
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=(localdb)\\mssqllocaldb;Database=PergamonLensDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
+            ?? "Host=localhost;Port=5432;Database=PergamonLensDb;Username=postgres;Password=postgres";
 
         services.AddDbContext<PergamonLensDbContext>(options =>
-            options.UseSqlServer(connectionString, sqlOptions =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                sqlOptions.MigrationsAssembly(typeof(PergamonLensDbContext).Assembly.FullName);
-                sqlOptions.EnableRetryOnFailure(
+                npgsqlOptions.MigrationsAssembly(typeof(PergamonLensDbContext).Assembly.FullName);
+                npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 3,
                     maxRetryDelay: TimeSpan.FromSeconds(5),
-                    errorNumbersToAdd: null);
+                    errorCodesToAdd: null);
             }));
 
         services.AddScoped<IMusicReleaseRepository, MusicReleaseRepository>();

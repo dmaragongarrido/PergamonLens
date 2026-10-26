@@ -1,21 +1,27 @@
+<div align="center">
+
 # 🏛️ PergamonLens
-> **AI-Powered Visual Catalog & Vault for Physical Media Collectors**  
-> *Escanear. Identificar. Preservar.*
+
+**Catálogo Visual con IA Multimodal para Coleccionistas de Formatos Físicos**
+
+*Música (Vinilos, CDs, Casetes) · Libros · Videojuegos*
+
+[![CI Build & Test](https://github.com/dmaragongarrido/PergamonLens/actions/workflows/ci.yml/badge.svg)](https://github.com/dmaragongarrido/PergamonLens/actions/workflows/ci.yml)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![C# 13](https://img.shields.io/badge/C%23-13-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/en-us/dotnet/csharp/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+</div>
 
 ---
 
-## 📖 El Origen: ¿Por qué PergamonLens?
+## 🎯 Visión del Proyecto
 
-Históricamente, la **Biblioteca de Pérgamo** fue la gran rival de la de Alejandría. Cuando Egipto prohibió la exportación de papiro para frenar su crecimiento, los sabios de Pérgamo inventaron el **pergamino**, permitiendo que miles de obras maestras sobrevivieran a los siglos.
+**PergamonLens** es una solución de catálogo inteligente diseñada para coleccionistas de medios físicos. El objetivo principal es eliminar la fricción manual de inventariar estanterías de vinilos, libros o videojuegos mediante una experiencia visual ágil: **apuntas la cámara del móvil a un álbum o estantería y la IA se encarga de identificar, clasificar, enriquecer y tasar cada pieza**.
 
-**PergamonLens** rinde homenaje a ese espíritu de preservación: una plataforma moderna diseñada para coleccionistas de formato físico (**vinilos, CDs, libros y videojuegos**) que permite catalogar, enriquecer y custodiar colecciones enteras con tan solo **hacer una fotografía**.
-
----
-
-## 🎯 El Problema y la Solución
-
-### El Dolor del Coleccionista
-Catalogar colecciones físicas es tradicionalmente lento y tedioso: teclear códigos de barras diminutos, transcribir números de matriz grabados en el vinilo o rellenar fichas a mano. Muchas aplicaciones existentes son lentas, no soportan múltiples formatos o carecen de metadatos fiables.
+### El Problema
+Catalogar colecciones físicas suele ser tedioso: introducir a mano códigos de barras o referencias alfanuméricas (números de matriz, sello discográfico, año de prensado) resulta lento y propenso a errores. Muchas veces, ediciones antiguas o especiales ni siquiera cuentan con código de barras legible.
 
 ### La Solución PergamonLens
 1. **Fotografía Rápida:** Tomas una foto de la portada, lomo o código de barras desde el móvil o navegador.
@@ -37,13 +43,13 @@ PergamonLens/
 ├── src/
 │   ├── PergamonLens.Domain/          # Entidades puras, Value Objects, eventos de dominio
 │   ├── PergamonLens.Application/     # Casos de uso (CQRS / MediatR), validaciones, DTOs
-│   ├── PergamonLens.Infrastructure/  # EF Core, SQL Server, Identity, APIs externas (Discogs), IA
-│   └── PergamonLens.Web/             # ASP.NET Core Minimal APIs + Frontend Web Responsive
+│   ├── PergamonLens.Infrastructure/  # EF Core, PostgreSQL (Npgsql), Identity, APIs externas, IA
+│   └── PergamonLens.Web/             # ASP.NET Core Minimal APIs + Frontend Web Responsive SPA
 ├── tests/
 │   ├── PergamonLens.UnitTests/       # Pruebas unitarias de dominio y casos de uso
-│   └── PergamonLens.IntegrationTests/# Pruebas de integración con SQL Server real
+│   └── PergamonLens.IntegrationTests/# Pruebas de integración con PostgreSQL real
 └── docker/
-    └── docker-compose.yml            # Orquestación de App + SQL Server
+    └── docker-compose.yml            # Orquestación de PostgreSQL 16 (Alpine)
 ```
 
 ### 🧱 Principios de Diseño
@@ -59,7 +65,7 @@ PergamonLens/
   - **Privacidad & Offline (Ollama Fallback):** Soporte alternativo 100% desacoplado mediante el contrato [`IVisionService`](file:///src/PergamonLens.Domain/Services/IVisionService.cs) para inferencia local y privada con modelos *open source* (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) sin depender de proveedores cloud externos.
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
 - **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
-- **Persistencia Robusta:** **Microsoft SQL Server** con **Entity Framework Core**, migraciones automatizadas e índices optimizados para búsqueda de colecciones.
+- **Persistencia Robusta & Eficiente:** **PostgreSQL 16** (vía `Npgsql.EntityFrameworkCore.PostgreSQL`) con **Entity Framework Core**, migraciones automatizadas e índices optimizados, con huella de memoria ultraligera (~40 MB de RAM).
 - **Integración Continua & GitHub Flow:** Desarrollo guiado por ramas cortas (`feature/*`), validación estricta automatizada mediante **GitHub Actions** en cada Pull Request (`dotnet build` + `dotnet test`) y estrategia de *Squash & Merge* hacia `main`.
 
 ---
@@ -69,12 +75,12 @@ PergamonLens/
 | Capa | Tecnología | Propósito |
 | :--- | :--- | :--- |
 | **Backend Core** | **.NET 10 / C#** | Alto rendimiento, sintaxis moderna y tipado estricto. |
-| **Base de Datos** | **Microsoft SQL Server** | Almacenamiento relacional transaccional y robusto. |
+| **Base de Datos** | **PostgreSQL 16 (Alpine)** | Almacenamiento relacional ultraligero (~40 MB RAM), escalable y compatible con hosting gratuito. |
 | **ORM & Migraciones** | **Entity Framework Core** | Mapeo objeto-relacional y control de esquemas. |
 | **Seguridad & Identidad** | **ASP.NET Core Identity** | Autenticación REST nativa, hash PBKDF2 y sesiones sin coste externo. |
 | **Motor de Visión / IA** | **Gemini 2.0 Flash / Llama 3.2 Vision** | Inferencia multimodal estructurada (JSON) + OCR determinista local. |
 | **APIs Externas** | **Discogs, OpenLibrary, IGDB** | Enriquecimiento canónico de música, libros y videojuegos. |
-| **Frontend Web** | **Web Responsive / PWA** | Interfaz optimizada para móvil con acceso directo a cámara. |
+| **Frontend Web** | **Web Responsive / SPA** | Interfaz optimizada para móvil con acceso directo a cámara WebRTC. |
 | **Testing** | **xUnit, FluentAssertions, Moq** | Cobertura exhaustiva de lógica de negocio y casos de uso. |
 | **Contenedores** | **Docker & Docker Compose** | Entorno de desarrollo reproducible con un solo comando. |
 
@@ -84,7 +90,7 @@ PergamonLens/
 
 - [x] **Hito 1: Scaffolding y Entorno Base**
   - Solución Clean Architecture en .NET 10 (`Domain`, `Application`, `Infrastructure`, `Web`, `UnitTests`, `IntegrationTests`).
-  - Configuración de `docker-compose.yml` para SQL Server 2022, `.editorconfig` y `.gitignore`.
+  - Configuración de `docker-compose.yml`, `.editorconfig` y `.gitignore`.
   - Repositorio público configurado en GitHub.
 - [x] **Hito 2: Core de Dominio (Música & Formatos Físicos: Vinilo, CD, Casete)**
   - Raíz de agregado `MusicRelease` con invariantes de negocio, ciclo de vida (`ProcessingStatus`) y soporte multiformato.
@@ -97,26 +103,26 @@ PergamonLens/
   - Consultas y Handlers: `GetReleaseByIdQuery`, `GetCollectionQuery` (filtros combinados), `GetCollectionStatisticsQuery`, `SearchDiscogsQuery`.
   - DTOs inmutables y mapeos estáticos puros (`MappingExtensions`).
   - Suite de **97 tests unitarios** al 100% en verde (~250 ms).
-- [x] **Hito 4: Capa de Infraestructura & Persistencia**
-  - `PergamonLensDbContext` con mapeos Fluent API para SQL Server 2022 (Value Objects, enums, cascada e índices).
-  - Migración inicial Code-First (`InitialCreate`) aplicada con éxito sobre SQL Server (`PergamonLensDb`).
+- [x] **Hito 4: Capa de Infraestructura & Persistencia (PostgreSQL)**
+  - `PergamonLensDbContext` con mapeos Fluent API para PostgreSQL 16 (Value Objects, enums, cascada e índices).
+  - Migración inicial Code-First (`InitialPostgreSqlMigration`) aplicada con éxito.
   - Repositorios de persistencia y consultas agregadas (`MusicReleaseRepository`, `CollectionRepository`).
   - Cliente HTTP resiliente para Discogs API con Polly (`AddStandardResilienceHandler`).
   - Procesamiento asíncrono en segundo plano mediante `System.Threading.Channels` y `BackgroundService`.
-  - Suite de **106 tests** (102 unitarios + 4 de integración con SQL Server) al 100% en verde.
+  - Suite de tests al 100% en verde.
 - [x] **Hito 5: Capa Web, Identidad & Interfaz Móvil**
   - Soporte multi-usuario con *Global Query Filters* en EF Core y pertenencia de lanzamientos (`UserId`).
   - Endpoints de autenticación REST con ASP.NET Core Identity (`/auth/register`, `/auth/login`, recuperación de contraseña).
   - Endpoints RESTful de catálogo en Minimal APIs protegidos con autorización (`[Authorize]`).
   - Frontend Web responsive SPA servida en `wwwroot` optimizada para móvil con captura WebRTC y cámara nativa.
-  - Suite de **135 tests** (115 unitarios + 20 de integración) pasando al 100% en verde.
+  - Suite de **135 tests** (115 unitarios + 20 de integración) pasando al 100% en verde sobre PostgreSQL.
 - [ ] **Hito 6: Motor de Visión & IA Multimodal (Google Gemini 2.0 Flash + ZXing.Net)**
   - Decodificador local determinista en memoria de códigos de barras (EAN-13, UPC) a coste cero de tokens (`ZXing.Net`).
   - Cliente HTTP resiliente con Polly para la API de Google Gemini 2.0 Flash con Structured Outputs (JSON Schema).
   - Gestión segura de API Key mediante `.NET User Secrets` y variables de entorno.
   - Pipeline de inferencia visual en dos fases y pruebas unitarias con simulación de respuestas multimodales.
-- [ ] **Hito 7: Testing de Integración con Testcontainers MSSQL & CI/CD**
-  - Tests de integración con Testcontainers MSSQL.
+- [ ] **Hito 7: Testing de Integración con Testcontainers PostgreSQL & CI/CD**
+  - Tests de integración con Testcontainers PostgreSQL.
   - Pipeline automatizado de GitHub Actions (build + tests en cada Pull Request).
 
 ---
@@ -125,7 +131,7 @@ PergamonLens/
 
 ### Requisitos Previos
 - [.NET 10 SDK](https://dotnet.microsoft.com/)
-- [Docker Desktop](https://www.docker.com/) o SQL Server LocalDB (para base de datos local)
+- [Docker Desktop](https://www.docker.com/)
 
 ### Pasos
 1. Clonar el repositorio:
@@ -133,15 +139,15 @@ PergamonLens/
    git clone https://github.com/dmaragongarrido/PergamonLens.git
    cd PergamonLens
    ```
-2. Ejecutar la batería de tests unitarios:
+2. Levantar la base de datos PostgreSQL:
+   ```bash
+   docker compose -f docker/docker-compose.yml up -d
+   ```
+3. Ejecutar la batería de tests (Unitarios + Integración):
    ```bash
    dotnet test
    ```
-3. Levantar la base de datos SQL Server:
-   ```bash
-   docker compose up -d sqlserver
-   ```
-4. Ejecutar las migraciones y la aplicación:
+4. Ejecutar la aplicación:
    ```bash
    dotnet run --project src/PergamonLens.Web
    ```

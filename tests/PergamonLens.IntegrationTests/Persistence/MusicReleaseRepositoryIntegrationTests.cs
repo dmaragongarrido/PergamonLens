@@ -20,15 +20,13 @@ public class MusicReleaseRepositoryIntegrationTests : IDisposable
 
     public MusicReleaseRepositoryIntegrationTests()
     {
-        string defaultConnection = OperatingSystem.IsWindows()
-            ? "Server=(localdb)\\mssqllocaldb;Database=PergamonLensDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
-            : "Server=localhost,1433;Database=PergamonLensDb;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=true";
+        string defaultConnection = "Host=localhost;Port=5432;Database=PergamonLensDb;Username=postgres;Password=postgres";
 
         string connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
             ?? defaultConnection;
 
         _options = new DbContextOptionsBuilder<PergamonLensDbContext>()
-            .UseSqlServer(connectionString)
+            .UseNpgsql(connectionString)
             .Options;
 
         _context = new PergamonLensDbContext(_options);
