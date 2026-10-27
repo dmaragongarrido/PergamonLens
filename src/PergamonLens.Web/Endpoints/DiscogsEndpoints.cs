@@ -21,16 +21,21 @@ public static class DiscogsEndpoints
             [FromQuery] string? catalogueNumber,
             [FromQuery] string? artist,
             [FromQuery] string? title,
+            [FromQuery] string? query,
+            [FromQuery] string? q,
             ISender sender,
             CancellationToken ct) =>
         {
-            var query = new SearchDiscogsQuery(
+            var freeText = !string.IsNullOrWhiteSpace(query) ? query : q;
+
+            var searchQuery = new SearchDiscogsQuery(
                 Barcode: barcode,
                 CatalogueNumber: catalogueNumber,
                 Artist: artist,
-                Title: title);
+                Title: title,
+                Query: freeText);
 
-            var result = await sender.Send(query, ct);
+            var result = await sender.Send(searchQuery, ct);
             return Results.Ok(result);
         })
         .WithName("SearchDiscogs")
@@ -42,4 +47,3 @@ public static class DiscogsEndpoints
         return app;
     }
 }
-

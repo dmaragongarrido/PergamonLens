@@ -46,89 +46,71 @@ public sealed class VisionService : IVisionService
 
         _logger.LogInformation("Iniciando pipeline de análisis visual de imagen (ContentType: {ContentType})", contentType);
 
-        // Garantizar que el stream pueda leerse y rebobinarse para ambas fases
-        Stream streamToProcess = imageStream;
-        MemoryStream? memoryStream = null;
-        if (!imageStream.CanSeek)
+        // Copiar el stream entrante (ej. ReferenceReadStream de ASP.NET Core) a un MemoryStream en memoria
+        // para aislarlo completamente y garantizar rebobinado seguro entre la Fase 1 y la Fase 2
+        using var memoryStream = new MemoryStream();
+        await imageStream.CopyToAsync(memoryStream, cancellationToken);
+        memoryStream.Position = 0;
+
+        // FASE 1: Detección determinista local de códigos de barras (0 tokens, ~2 ms)
+        var barcodeResult = _barcodeScanner.Scan(memoryStream);
+        if (barcodeResult != null)
         {
-            memoryStream = new MemoryStream();
-            await imageStream.CopyToAsync(memoryStream, cancellationToken);
-            memoryStream.Position = 0;
-            streamToProcess = memoryStream;
-        }
+            var category = DetermineCategoryFromBarcode(barcodeResult.Barcode);
 
-        try
-        {
-            // FASE 1: Detección determinista local de códigos de barras (0 tokens, ~2 ms)
-            var barcodeResult = _barcodeScanner.Scan(streamToProcess);
-            if (barcodeResult != null)
-            {
-                var category = DetermineCategoryFromBarcode(barcodeResult.Barcode);
-
-                _logger.LogInformation("Código de barras detectado en Fase 1 determinista: {Barcode} ({Format}, Categoría inferida: {Category}). Omitiendo IA cloud.",
-                    barcodeResult.Barcode, barcodeResult.BarcodeFormat, category);
-
-                return new VisionExtractionResult(
-                    DetectedTitle: null,
-                    DetectedArtist: null,
-                    DetectedBarcode: barcodeResult.Barcode,
-                    DetectedCatalogueNumber: null,
-                    DetectedLabel: null,
-                    Confidence: 1.0,
-                    RawTextDetected: $"Barcode format: {barcodeResult.BarcodeFormat}",
-                    Category: category);
-            }
-
-            _logger.LogInformation("Fase 1 no detectó código de barras. Procediendo a Fase 2 (Inferencia multimodal con Gemini 2.0 Flash).");
-
-            if (streamToProcess.CanSeek)
-            {
-                streamToProcess.Position = 0;
-            }
-
-            // FASE 2: Inferencia multimodal cloud con Gemini 2.0 Flash
-            var geminiAnalysis = await _geminiVisionClient.AnalyzeMediaCoverAsync(streamToProcess, contentType, cancellationToken);
-            if (geminiAnalysis != null)
-            {
-                var category = ParsePhysicalMediaCategory(geminiAnalysis.MediaCategory);
-
-                _logger.LogInformation("Inferencia multimodal completada con éxito. Título: '{Title}', Creador: '{Creator}', Categoría: {Category}, Confianza: {Confidence:P0}",
-                    geminiAnalysis.Title, geminiAnalysis.Creator, category, geminiAnalysis.Confidence);
-
-                return new VisionExtractionResult(
-                    DetectedTitle: geminiAnalysis.Title,
-                    DetectedArtist: geminiAnalysis.Creator,
-                    DetectedBarcode: geminiAnalysis.Barcode,
-                    DetectedCatalogueNumber: geminiAnalysis.CatalogueOrIdentifier,
-                    DetectedLabel: geminiAnalysis.PublisherOrLabel,
-                    Confidence: geminiAnalysis.Confidence,
-                    RawTextDetected: $"Gemini Structured Output ({geminiAnalysis.MediaCategory})",
-                    Category: category,
-                    DetectedFormat: geminiAnalysis.Format,
-                    DetectedPlatform: geminiAnalysis.Platform,
-                    DetectedReleaseYear: geminiAnalysis.ReleaseYear,
-                    SuggestedSearchQuery: geminiAnalysis.SuggestedSearchQuery);
-            }
-
-            _logger.LogWarning("Fase 2 no obtuvo resultado estructurado de Gemini. Aplicando degradación elegante a fallback de desarrollo.");
+            _logger.LogInformation("Código de barras detectado en Fase 1 determinista: {Barcode} ({Format}, Categoría inferida: {Category}). Omitiendo IA cloud.",
+                barcodeResult.Barcode, barcodeResult.BarcodeFormat, category);
 
             return new VisionExtractionResult(
                 DetectedTitle: null,
                 DetectedArtist: null,
-                DetectedBarcode: null,
+                DetectedBarcode: barcodeResult.Barcode,
                 DetectedCatalogueNumber: null,
                 DetectedLabel: null,
-                Confidence: _options.Value.DefaultConfidence,
-                RawTextDetected: "No barcode detected. Multimodal inference fallback.",
-                Category: PhysicalMediaCategory.Music);
+                Confidence: 1.0,
+                RawTextDetected: $"Barcode format: {barcodeResult.BarcodeFormat}",
+                Category: category);
         }
-        finally
+
+        _logger.LogInformation("Fase 1 no detectó código de barras. Procediendo a Fase 2 (Inferencia multimodal con Gemini 2.0 Flash).");
+
+        memoryStream.Position = 0;
+
+        // FASE 2: Inferencia multimodal cloud con Gemini 2.0 Flash
+        var geminiAnalysis = await _geminiVisionClient.AnalyzeMediaCoverAsync(memoryStream, contentType, cancellationToken);
+        if (geminiAnalysis != null)
         {
-            if (memoryStream != null)
-            {
-                await memoryStream.DisposeAsync();
-            }
+            var category = ParsePhysicalMediaCategory(geminiAnalysis.MediaCategory);
+
+            _logger.LogInformation("Inferencia multimodal completada con éxito. Título: '{Title}', Creador: '{Creator}', Categoría: {Category}, Confianza: {Confidence:P0}",
+                geminiAnalysis.Title, geminiAnalysis.Creator, category, geminiAnalysis.Confidence);
+
+            return new VisionExtractionResult(
+                DetectedTitle: geminiAnalysis.Title,
+                DetectedArtist: geminiAnalysis.Creator,
+                DetectedBarcode: geminiAnalysis.Barcode,
+                DetectedCatalogueNumber: geminiAnalysis.CatalogueOrIdentifier,
+                DetectedLabel: geminiAnalysis.PublisherOrLabel,
+                Confidence: geminiAnalysis.Confidence,
+                RawTextDetected: $"Gemini Structured Output ({geminiAnalysis.MediaCategory})",
+                Category: category,
+                DetectedFormat: geminiAnalysis.Format,
+                DetectedPlatform: geminiAnalysis.Platform,
+                DetectedReleaseYear: geminiAnalysis.ReleaseYear,
+                SuggestedSearchQuery: geminiAnalysis.SuggestedSearchQuery);
         }
+
+        _logger.LogWarning("Fase 2 no obtuvo resultado estructurado de Gemini. Aplicando degradación elegante a fallback de desarrollo.");
+
+        return new VisionExtractionResult(
+            DetectedTitle: null,
+            DetectedArtist: null,
+            DetectedBarcode: null,
+            DetectedCatalogueNumber: null,
+            DetectedLabel: null,
+            Confidence: _options.Value.DefaultConfidence,
+            RawTextDetected: "No barcode detected. Multimodal inference fallback.",
+            Category: PhysicalMediaCategory.Music);
     }
 
     private static PhysicalMediaCategory DetermineCategoryFromBarcode(string barcode)

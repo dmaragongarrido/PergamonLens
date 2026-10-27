@@ -36,6 +36,10 @@ public sealed class SearchDiscogsQueryHandler : IRequestHandler<SearchDiscogsQue
         {
             results = await _discogsService.SearchByQueryAsync(request.Artist, request.Title, cancellationToken);
         }
+        else if (!string.IsNullOrWhiteSpace(request.Query))
+        {
+            results = await _discogsService.SearchByFreeTextAsync(request.Query, cancellationToken);
+        }
         else
         {
             results = [];

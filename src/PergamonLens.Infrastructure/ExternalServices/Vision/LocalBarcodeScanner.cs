@@ -50,7 +50,10 @@ public sealed class LocalBarcodeScanner : IBarcodeScanner
                 imageStream.Position = 0;
             }
 
-            using var skBitmap = SKBitmap.Decode(imageStream);
+            // Usar disposeManagedStream: false explícitamente para evitar que SkiaSharp
+            // cierre o libere el Stream subyacente que luego necesita la Fase 2 (Gemini).
+            using var managedStream = new SKManagedStream(imageStream, disposeManagedStream: false);
+            using var skBitmap = SKBitmap.Decode(managedStream);
             if (skBitmap == null)
             {
                 _logger.LogDebug("No se pudo decodificar el stream como bitmap SkiaSharp válido.");
@@ -82,9 +85,16 @@ public sealed class LocalBarcodeScanner : IBarcodeScanner
         }
         finally
         {
-            if (imageStream.CanSeek)
+            try
             {
-                imageStream.Position = 0;
+                if (imageStream.CanRead && imageStream.CanSeek)
+                {
+                    imageStream.Position = 0;
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // Protección defensiva en caso de streams efímeros de ASP.NET Core
             }
         }
     }

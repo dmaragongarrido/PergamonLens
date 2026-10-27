@@ -10,5 +10,6 @@ public sealed record SearchDiscogsQuery(
     string? Barcode = null,
     string? CatalogueNumber = null,
     string? Artist = null,
-    string? Title = null) : IRequest<IReadOnlyList<DiscogsSearchResultDto>>;
+    string? Title = null,
+    string? Query = null) : IRequest<IReadOnlyList<DiscogsSearchResultDto>>;
 

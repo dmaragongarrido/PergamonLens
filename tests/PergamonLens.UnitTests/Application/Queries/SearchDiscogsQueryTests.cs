@@ -68,6 +68,43 @@ public class SearchDiscogsQueryTests
     }
 
     [Fact]
+    public async Task Handle_WithFreeTextQuery_ShouldCallSearchByFreeTextAsync()
+    {
+        // Arrange
+        var expectedResults = new List<DiscogsSearchResult>
+        {
+            new(5678, "A Night at the Opera", "Queen", 1975, "EMI", "EMTC 103", "UK", "https://img.jpg")
+        };
+
+        _discogsServiceMock
+            .Setup(s => s.SearchByFreeTextAsync("Queen A Night at the Opera", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResults);
+
+        var query = new SearchDiscogsQuery(Query: "Queen A Night at the Opera");
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].Title.Should().Be("A Night at the Opera");
+        result[0].Artist.Should().Be("Queen");
+    }
+
+    [Fact]
+    public void Validator_WithFreeTextQuery_ShouldBeValid()
+    {
+        // Arrange
+        var query = new SearchDiscogsQuery(Query: "The Beatles");
+
+        // Act
+        var result = _validator.Validate(query);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public void Validator_WhenAllCriteriaAreEmpty_ShouldHaveValidationError()
     {
         // Arrange

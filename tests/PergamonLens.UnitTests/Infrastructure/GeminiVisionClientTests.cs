@@ -26,7 +26,7 @@ public sealed class GeminiVisionClientTests
         _options = Options.Create(new VisionOptions
         {
             ApiKey = "test-gemini-api-key",
-            Model = "gemini-2.0-flash",
+            Model = "gemini-flash-lite-latest",
             BaseUrl = "https://generativelanguage.googleapis.com/"
         });
     }
@@ -95,7 +95,7 @@ public sealed class GeminiVisionClientTests
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains("models/gemini-2.0-flash:generateContent")),
+                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains("models/gemini-flash-lite-latest:generateContent")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
             {

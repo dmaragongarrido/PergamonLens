@@ -13,10 +13,11 @@ public sealed record DiscogsSearchResult(
     string? Label,
     string? CatalogueNumber,
     string? Country,
-    string? CoverThumbUrl);
+    string? CoverThumbUrl,
+    string? Format = null);
 
 /// <summary>
-/// Metadatos detallados de una edición concreta de vinilo en Discogs.
+/// Metadatos detallados de una edición concreta en Discogs (Vinilo, CD, Casete, etc.).
 /// </summary>
 public sealed record DiscogsReleaseDetails(
     long ReleaseId,
@@ -27,7 +28,8 @@ public sealed record DiscogsReleaseDetails(
     string? CatalogueNumber,
     string? Country,
     string? CoverImageUrl,
-    IReadOnlyList<DiscogsTrackItem> Tracks);
+    IReadOnlyList<DiscogsTrackItem> Tracks,
+    string? Format = null);
 
 /// <summary>
 /// Representa un corte musical extraído de Discogs.
@@ -53,6 +55,10 @@ public interface IDiscogsService
     Task<IReadOnlyList<DiscogsSearchResult>> SearchByQueryAsync(
         string artist,
         string title,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DiscogsSearchResult>> SearchByFreeTextAsync(
+        string query,
         CancellationToken cancellationToken = default);
 
     Task<DiscogsReleaseDetails?> GetReleaseDetailsAsync(

@@ -30,6 +30,9 @@ public sealed class DiscogsSearchItemResponse
 
     [JsonPropertyName("thumb")]
     public string? Thumb { get; set; }
+
+    [JsonPropertyName("format")]
+    public List<string>? Format { get; set; }
 }
 
 public sealed class DiscogsReleaseApiResponse
@@ -57,6 +60,21 @@ public sealed class DiscogsReleaseApiResponse
 
     [JsonPropertyName("tracklist")]
     public List<DiscogsTrackResponse>? Tracklist { get; set; }
+
+    [JsonPropertyName("formats")]
+    public List<DiscogsFormatResponse>? Formats { get; set; }
+}
+
+public sealed class DiscogsFormatResponse
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("qty")]
+    public string? Qty { get; set; }
+
+    [JsonPropertyName("descriptions")]
+    public List<string>? Descriptions { get; set; }
 }
 
 public sealed class DiscogsArtistResponse
