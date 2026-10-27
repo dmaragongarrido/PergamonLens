@@ -1,7 +1,18 @@
 namespace PergamonLens.Domain.Services;
 
 /// <summary>
-/// Resultado del análisis visual de una imagen de portada o código de barras.
+/// Categoría del medio físico coleccionable detectado en el análisis visual.
+/// </summary>
+public enum PhysicalMediaCategory
+{
+    Music,
+    Book,
+    VideoGame,
+    Unknown
+}
+
+/// <summary>
+/// Resultado del análisis visual de una imagen de portada, lomo o código de barras.
 /// </summary>
 public sealed record VisionExtractionResult(
     string? DetectedTitle,
@@ -10,7 +21,18 @@ public sealed record VisionExtractionResult(
     string? DetectedCatalogueNumber,
     string? DetectedLabel,
     double Confidence,
-    string? RawTextDetected = null);
+    string? RawTextDetected = null,
+    PhysicalMediaCategory Category = PhysicalMediaCategory.Music,
+    string? DetectedFormat = null,
+    string? DetectedPlatform = null,
+    int? DetectedReleaseYear = null,
+    string? SuggestedSearchQuery = null)
+{
+    /// <summary>
+    /// Alias semántico para creadores en medios distintos a música (Autor en libros, Desarrollador en videojuegos).
+    /// </summary>
+    public string? DetectedCreator => DetectedArtist;
+}
 
 /// <summary>
 /// Contrato para el servicio de inteligencia artificial visual multimodal (OCR y detección de entidades en portadas/lomos).
@@ -22,4 +44,3 @@ public interface IVisionService
         string contentType,
         CancellationToken cancellationToken = default);
 }
-
