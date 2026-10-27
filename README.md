@@ -116,14 +116,21 @@ PergamonLens/
   - Endpoints RESTful de catálogo en Minimal APIs protegidos con autorización (`[Authorize]`).
   - Frontend Web responsive SPA servida en `wwwroot` optimizada para móvil con captura WebRTC y cámara nativa.
   - Suite de **135 tests** (115 unitarios + 20 de integración) pasando al 100% en verde sobre PostgreSQL.
-- [ ] **Hito 6: Motor de Visión & IA Multimodal (Google Gemini 2.0 Flash + ZXing.Net)**
-  - Decodificador local determinista en memoria de códigos de barras (EAN-13, UPC) a coste cero de tokens (`ZXing.Net`).
-  - Cliente HTTP resiliente con Polly para la API de Google Gemini 2.0 Flash con Structured Outputs (JSON Schema).
-  - Gestión segura de API Key mediante `.NET User Secrets` y variables de entorno.
-  - Pipeline de inferencia visual en dos fases y pruebas unitarias con simulación de respuestas multimodales.
-- [ ] **Hito 7: Testing de Integración con Testcontainers PostgreSQL & CI/CD**
-  - Tests de integración con Testcontainers PostgreSQL.
-  - Pipeline automatizado de GitHub Actions (build + tests en cada Pull Request).
+- [x] **Hito 6: Motor de Visión & IA Multimodal (Google Gemini + ZXing.Net)**
+  - Pipeline de inferencia visual híbrido en dos fases: Fase 1 determinista local en memoria (`ZXing.Net`, ~2 ms, 0 tokens) + Fase 2 multimodal con Google Gemini (`gemini-flash-lite-latest`, ~1 s, 0,00 € permanente).
+  - Structured Outputs con JSON Schema estricto (Música, Libros, Videojuegos) y reconocimiento iconográfico de portadas sin texto.
+  - Resiliencia interactiva con Polly (fast-fail) para respuesta en tiempo real sin bloqueo de interfaz.
+  - Auto-deducción inteligente del soporte físico (CD vs Vinilo) y enriquecimiento canónico automático desde Discogs (portada oficial en alta resolución y tracklist).
+  - Batería de **160 tests** (140 unitarios + 20 de integración sobre PostgreSQL) al 100% en verde.
+- [ ] **Hito 7: Rediseño UI/UX Premium & Experiencia Móvil**
+  - Rediseño de la interfaz visual con estética de autor y navegación táctil mobile-first.
+  - Arquitectura visual y de interacción extensible y polimórfica (diseñada para música actual y preparada para libros, videojuegos y futuros coleccionables).
+  - Flujo de escaneo e ingesta mágica con transiciones de estado inmersivas.
+  - Graduación de estado y vistas de Bóveda optimizadas para coleccionistas.
+- [ ] **Hito 8: CI/CD, Despliegue & Producción**
+  - Dockerización final multi-stage y optimización del pipeline de GitHub Actions.
+  - Configuración de variables de entorno, secrets y publicación en producción.
+  - Verificación final de escaparate técnico de autor.
 
 ---
 
