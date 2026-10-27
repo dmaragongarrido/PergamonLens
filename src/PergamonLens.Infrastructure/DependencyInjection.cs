@@ -55,7 +55,7 @@ public static class DependencyInjection
         })
         .AddStandardResilienceHandler();
 
-        // 3. Servicio de Visión IA Multimodal
+        // 3. Servicio de Visión IA Multimodal (Fast-fail interactivo para UI fluida)
         services.Configure<VisionOptions>(configuration.GetSection(VisionOptions.SectionName));
         services.AddSingleton<IBarcodeScanner, LocalBarcodeScanner>();
 
@@ -63,9 +63,15 @@ public static class DependencyInjection
         {
             var options = serviceProvider.GetRequiredService<IOptions<VisionOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromSeconds(10);
         })
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(options =>
+        {
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(8);
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(6);
+            options.Retry.MaxRetryAttempts = 1;
+            options.Retry.Delay = TimeSpan.FromSeconds(1);
+        });
 
         services.AddScoped<IVisionService, VisionService>();
 

@@ -56,6 +56,16 @@ public sealed class DiscogsService : IDiscogsService
         return await ExecuteSearchAsync(url, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<DiscogsSearchResult>> SearchByFreeTextAsync(
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+
+        string url = $"database/search?q={Uri.EscapeDataString(query)}&type=release";
+        return await ExecuteSearchAsync(url, cancellationToken);
+    }
+
     public async Task<DiscogsReleaseDetails?> GetReleaseDetailsAsync(
         long releaseId,
         CancellationToken cancellationToken = default)
@@ -80,6 +90,7 @@ public sealed class DiscogsService : IDiscogsService
             string? label = response.Labels?.FirstOrDefault()?.Name;
             string? catNo = response.Labels?.FirstOrDefault()?.Catno;
             string? coverImageUrl = response.Images?.FirstOrDefault()?.Uri;
+            string? format = response.Formats?.FirstOrDefault()?.Name;
 
             var tracks = (response.Tracklist ?? [])
                 .Where(t => !string.IsNullOrWhiteSpace(t.Title))
@@ -98,7 +109,8 @@ public sealed class DiscogsService : IDiscogsService
                 catNo,
                 response.Country,
                 coverImageUrl,
-                tracks);
+                tracks,
+                format);
         }
         catch (HttpRequestException ex)
         {
@@ -124,6 +136,7 @@ public sealed class DiscogsService : IDiscogsService
                 {
                     var (artist, title) = SplitArtistAndTitle(r.Title);
                     int? year = int.TryParse(r.Year, out int y) ? y : null;
+                    string? format = r.Format?.FirstOrDefault();
 
                     return new DiscogsSearchResult(
                         r.Id,
@@ -133,7 +146,8 @@ public sealed class DiscogsService : IDiscogsService
                         r.Label?.FirstOrDefault(),
                         r.Catno,
                         r.Country,
-                        r.Thumb);
+                        r.Thumb,
+                        format);
                 })
                 .ToList();
         }

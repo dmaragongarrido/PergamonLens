@@ -275,6 +275,21 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
+    /// Actualiza el formato físico del lanzamiento (ej. al identificarse como CD, Casete o Vinilo desde Discogs/IA).
+    /// </summary>
+    public void UpdateFormat(MediaFormat format)
+    {
+        EnsureNotConfirmed();
+        Format = format;
+        if (format != MediaFormat.Vinyl)
+        {
+            VinylSize = null;
+            VinylSpeed = null;
+        }
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Enriquece el lanzamiento con información contrastada obtenida de la API canónica (ej. Discogs).
     /// </summary>
     public void EnrichFromDiscogs(

@@ -1,7 +1,7 @@
 namespace PergamonLens.Infrastructure.ExternalServices.Vision;
 
 /// <summary>
-/// Opciones de configuración para el servicio de Visión e Inteligencia Artificial Multimodal (Gemini 2.0 Flash / Local).
+/// Opciones de configuración para el servicio de Visión e Inteligencia Artificial Multimodal (Gemini Flash-Lite / Local).
 /// </summary>
 public sealed class VisionOptions
 {
@@ -10,7 +10,7 @@ public sealed class VisionOptions
     public string Provider { get; set; } = "Gemini";
     public string? ApiKey { get; set; }
     public string? GeminiApiKey { get; set; }
-    public string Model { get; set; } = "gemini-2.0-flash";
+    public string Model { get; set; } = "gemini-flash-lite-latest";
     public string BaseUrl { get; set; } = "https://generativelanguage.googleapis.com/";
     public double DefaultConfidence { get; set; } = 0.90;
 

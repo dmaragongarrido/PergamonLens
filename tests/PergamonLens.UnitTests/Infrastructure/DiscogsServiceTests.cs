@@ -109,6 +109,39 @@ public class DiscogsServiceTests
     }
 
     [Fact]
+    public async Task SearchByFreeTextAsync_WhenApiReturnsResults_ShouldMapToDomainDtos()
+    {
+        // Arrange
+        var jsonResponse = """"""
+        {
+            "results": [
+                {
+                    "id": 88888,
+                    "title": "Queen - A Night at the Opera",
+                    "year": "1975",
+                    "label": ["EMI"],
+                    "catno": "EMTC 103",
+                    "country": "UK",
+                    "thumb": "https://img.discogs.com/opera.jpg"
+                }
+            ]
+        }
+        """""";
+
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        // Act
+        var results = await _service.SearchByFreeTextAsync("Queen Opera", CancellationToken.None);
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Artist.Should().Be("Queen");
+        results[0].Title.Should().Be("A Night at the Opera");
+        results[0].Year.Should().Be(1975);
+        results[0].Label.Should().Be("EMI");
+    }
+
+    [Fact]
     public async Task GetReleaseDetailsAsync_WhenReleaseExists_ShouldMapTracksAndMetadata()
     {
         // Arrange

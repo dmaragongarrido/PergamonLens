@@ -3,6 +3,7 @@ using PergamonLens.Application.Common.Exceptions;
 using PergamonLens.Application.DTOs;
 using PergamonLens.Application.Mappings;
 using PergamonLens.Domain.Entities;
+using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
 using PergamonLens.Domain.Services;
 using PergamonLens.Domain.ValueObjects;
@@ -59,9 +60,14 @@ public sealed class EnrichReleaseFromDiscogsCommandHandler : IRequestHandler<Enr
             details.CoverImageUrl,
             tracks);
 
+        var detectedFormat = MediaFormatExtensions.ParseFromText(details.Format);
+        if (detectedFormat.HasValue && detectedFormat.Value != release.Format)
+        {
+            release.UpdateFormat(detectedFormat.Value);
+        }
+
         await _repository.UpdateAsync(release, cancellationToken);
 
         return release.ToDto();
     }
 }
-

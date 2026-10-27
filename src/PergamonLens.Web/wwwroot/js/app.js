@@ -638,7 +638,8 @@
 
     const formData = new FormData();
     formData.append('file', state.selectedScanBlob, state.selectedScanFileName || 'scan.jpg');
-    formData.append('format', format);
+    const effectiveFormat = format === 'Auto' ? 'Vinyl' : format;
+    formData.append('format', effectiveFormat);
 
     try {
       const result = await apiFetch('/api/releases/scan', {
