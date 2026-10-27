@@ -92,6 +92,11 @@ public static class MappingExtensions
             result.DetectedCatalogueNumber,
             result.DetectedLabel,
             result.Confidence,
-            result.RawTextDetected);
+            result.RawTextDetected,
+            result.Category.ToString(),
+            result.DetectedFormat,
+            result.DetectedPlatform,
+            result.DetectedReleaseYear,
+            result.SuggestedSearchQuery);
     }
 }

@@ -57,6 +57,16 @@ public static class DependencyInjection
 
         // 3. Servicio de Visión IA Multimodal
         services.Configure<VisionOptions>(configuration.GetSection(VisionOptions.SectionName));
+        services.AddSingleton<IBarcodeScanner, LocalBarcodeScanner>();
+
+        services.AddHttpClient<IGeminiVisionClient, GeminiVisionClient>((serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<VisionOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .AddStandardResilienceHandler();
+
         services.AddScoped<IVisionService, VisionService>();
 
         // 4. Cola y Worker Asíncrono en Segundo Plano (System.Threading.Channels)
