@@ -18,6 +18,7 @@
     userEmail: localStorage.getItem(STORAGE_EMAIL_KEY) || null,
     releases: [],
     statistics: null,
+    currentCategory: 'music', // 'music' | 'books' | 'games'
     currentFilter: 'all',
     searchQuery: '',
     searchDebounceTimer: null,
@@ -46,10 +47,11 @@
       const response = await fetch(url, options);
 
       if (response.status === 401) {
-        // Token caducado o inválido
+        if (url.includes('/auth/login')) {
+          throw new Error('Correo electrónico o contraseña incorrectos.');
+        }
         logout(false);
         showToast('Sesión Expirada', 'Por favor inicia sesión de nuevo para acceder a tu colección.', 'error');
-        openAuthModal('login');
         throw new Error('Unauthorized');
       }
 
@@ -65,7 +67,6 @@
         let errorDetail = 'Ha ocurrido un error en la solicitud.';
         if (isJson && data) {
           if (data.errors && typeof data.errors === 'object') {
-            // Formato RFC 7807 ValidationProblemDetails
             const messages = Object.entries(data.errors)
               .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
               .join(' | ');
@@ -136,33 +137,205 @@
   }
 
   // ============================================================================
-  // Autenticación de Usuario
+  // Pilar 1: Pantalla de Bienvenida & Auth Flow
+  // ============================================================================
+  function switchWelcomeTab(mode) {
+    state.authMode = mode;
+    const tabLogin = document.getElementById('tabWelcomeLogin');
+    const tabRegister = document.getElementById('tabWelcomeRegister');
+    const submitBtnText = document.getElementById('btnWelcomeSubmitText');
+    const passwordHelp = document.getElementById('welcomePasswordHelp');
+    const errorContainer = document.getElementById('welcomeError');
+
+    if (errorContainer) errorContainer.style.display = 'none';
+
+    if (mode === 'login') {
+      if (tabLogin) tabLogin.classList.add('active');
+      if (tabRegister) tabRegister.classList.remove('active');
+      if (submitBtnText) submitBtnText.textContent = 'Abrir mi Bóveda ➔';
+      if (passwordHelp) passwordHelp.style.display = 'none';
+    } else {
+      if (tabRegister) tabRegister.classList.add('active');
+      if (tabLogin) tabLogin.classList.remove('active');
+      if (submitBtnText) submitBtnText.textContent = 'Crear Cuenta de Coleccionista ➔';
+      if (passwordHelp) passwordHelp.style.display = 'block';
+    }
+  }
+
+  function toggleWelcomePasswordVisibility() {
+    const input = document.getElementById('welcomePassword');
+    const iconOpen = document.getElementById('iconEyeOpen');
+    const iconClosed = document.getElementById('iconEyeClosed');
+    if (!input) return;
+
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (iconOpen) iconOpen.style.display = 'none';
+      if (iconClosed) iconClosed.style.display = 'block';
+    } else {
+      input.type = 'password';
+      if (iconOpen) iconOpen.style.display = 'block';
+      if (iconClosed) iconClosed.style.display = 'none';
+    }
+  }
+
+  function showWelcomeError(message) {
+    const container = document.getElementById('welcomeError');
+    const textEl = document.getElementById('welcomeErrorText');
+    if (container && textEl) {
+      textEl.textContent = message;
+      container.style.display = 'flex';
+    }
+  }
+
+  function transitionToVault() {
+    const welcomeView = document.getElementById('welcomeView');
+    const vaultApp = document.getElementById('vaultApp');
+    const authModal = document.getElementById('authModal');
+
+    if (authModal) authModal.classList.remove('active');
+    if (welcomeView) {
+      welcomeView.classList.remove('fade-out');
+      welcomeView.style.display = 'none';
+    }
+    if (vaultApp) {
+      vaultApp.style.display = 'flex';
+      vaultApp.classList.add('fade-in');
+      setTimeout(() => vaultApp.classList.remove('fade-in'), 400);
+    }
+    renderAuthStatus();
+  }
+
+  function transitionToWelcome() {
+    const welcomeView = document.getElementById('welcomeView');
+    const vaultApp = document.getElementById('vaultApp');
+
+    if (vaultApp) vaultApp.style.display = 'none';
+    if (welcomeView) {
+      welcomeView.style.display = 'flex';
+      welcomeView.classList.remove('fade-out');
+    }
+    const pwdInput = document.getElementById('welcomePassword');
+    if (pwdInput) {
+      pwdInput.value = '';
+      pwdInput.type = 'password';
+    }
+    const iconOpen = document.getElementById('iconEyeOpen');
+    const iconClosed = document.getElementById('iconEyeClosed');
+    if (iconOpen) iconOpen.style.display = 'block';
+    if (iconClosed) iconClosed.style.display = 'none';
+
+    const err = document.getElementById('welcomeError');
+    if (err) err.style.display = 'none';
+
+    switchWelcomeTab('login');
+  }
+
+  async function handleWelcomeSubmit(e) {
+    e.preventDefault();
+    const errorContainer = document.getElementById('welcomeError');
+    if (errorContainer) errorContainer.style.display = 'none';
+
+    const emailInput = document.getElementById('welcomeEmail');
+    const passwordInput = document.getElementById('welcomePassword');
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+
+    if (!email || !password) {
+      showWelcomeError('Por favor ingresa tu correo electrónico y contraseña.');
+      return;
+    }
+
+    if (state.authMode === 'register' && password.length < 6) {
+      showWelcomeError('La contraseña debe contener al menos 6 caracteres.');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btnWelcomeSubmit');
+    const submitSpinner = document.getElementById('btnWelcomeSubmitSpinner');
+    const submitText = document.getElementById('btnWelcomeSubmitText');
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (submitSpinner) submitSpinner.style.display = 'inline-block';
+    if (submitText) {
+      submitText.textContent = state.authMode === 'register'
+        ? 'Creando cuenta de coleccionista...'
+        : 'Verificando credenciales...';
+    }
+
+    try {
+      if (state.authMode === 'register') {
+        await apiFetch('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        showToast('Cuenta Creada', 'Registro completado con éxito. Iniciando sesión...', 'success');
+      }
+
+      const loginResult = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+
+      if (loginResult && loginResult.accessToken) {
+        state.token = loginResult.accessToken;
+        state.userEmail = email;
+        localStorage.setItem(STORAGE_TOKEN_KEY, state.token);
+        localStorage.setItem(STORAGE_EMAIL_KEY, state.userEmail);
+
+        transitionToVault();
+        showToast('Bienvenido a PergamonLens', `Sesión iniciada como ${email}`, 'success');
+
+        await refreshAll();
+      } else {
+        throw new Error('No se recibió el token de acceso del servidor.');
+      }
+    } catch (err) {
+      console.error('Error de autenticación:', err);
+      showWelcomeError(err.message || 'Error al autenticar. Revisa tus credenciales.');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitSpinner) submitSpinner.style.display = 'none';
+      if (submitText) {
+        submitText.textContent = state.authMode === 'register'
+          ? 'Crear Cuenta de Coleccionista ➔'
+          : 'Abrir mi Bóveda ➔';
+      }
+    }
+  }
+
+  // ============================================================================
+  // Autenticación de Usuario (Punto #3: Badge compacto sin desbordar en móvil)
   // ============================================================================
   function renderAuthStatus() {
     const container = document.getElementById('authStatusContainer');
     if (!container) return;
 
     if (state.token && state.userEmail) {
+      const alias = state.userEmail.includes('@')
+        ? state.userEmail.split('@')[0]
+        : state.userEmail;
+
       container.innerHTML = `
-        <div class="user-profile-badge">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="user-profile-badge" title="${escapeHtml(state.userEmail)}">
+          <svg class="user-profile-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span class="user-email" title="${escapeHtml(state.userEmail)}">${escapeHtml(state.userEmail)}</span>
-          <button class="btn btn-sm btn-secondary" onclick="app.logout(true)" title="Cerrar Sesión" style="padding: 0.2rem 0.5rem; margin-left: 0.25rem;">
-            Salir
+          <span class="user-email-text">${escapeHtml(alias)}</span>
+          <button type="button" class="btn-logout-pill" onclick="app.logout(true)" title="Cerrar Sesión">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Salir</span>
           </button>
         </div>
       `;
     } else {
       container.innerHTML = `
         <button class="btn btn-outline-gold btn-sm" onclick="app.openAuthModal('login')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-            <polyline points="10 17 15 12 10 7"></polyline>
-            <line x1="15" y1="12" x2="3" y2="12"></line>
-          </svg>
           Iniciar Sesión
         </button>
       `;
@@ -219,7 +392,6 @@
 
     try {
       if (state.authMode === 'register') {
-        // 1. Registro
         await apiFetch('/auth/register', {
           method: 'POST',
           body: JSON.stringify({ email, password })
@@ -227,7 +399,6 @@
         showToast('Cuenta Creada', 'Registro completado con éxito. Iniciando sesión...', 'success');
       }
 
-      // 2. Login para obtener el token Bearer
       const loginResult = await apiFetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
@@ -239,7 +410,7 @@
         localStorage.setItem(STORAGE_TOKEN_KEY, state.token);
         localStorage.setItem(STORAGE_EMAIL_KEY, state.userEmail);
 
-        renderAuthStatus();
+        transitionToVault();
         closeAuthModal();
         showToast('Bienvenido a PergamonLens', `Sesión iniciada como ${email}`, 'success');
 
@@ -260,7 +431,7 @@
     localStorage.removeItem(STORAGE_TOKEN_KEY);
     localStorage.removeItem(STORAGE_EMAIL_KEY);
 
-    renderAuthStatus();
+    transitionToWelcome();
     renderStatistics(null);
     renderReleases([]);
 
@@ -290,6 +461,8 @@
     document.getElementById('statCassettes').textContent = stats ? (stats.formatBreakdown?.Cassette || 0) : '0';
     document.getElementById('statTracks').textContent = stats ? (stats.totalTracks || 0) : '0';
     document.getElementById('statConfirmed').textContent = stats ? (stats.confirmedReleases || 0) : '0';
+    const musicCountEl = document.getElementById('categoryMusicCount');
+    if (musicCountEl) musicCountEl.textContent = stats ? (stats.totalReleases || 0) : '0';
   }
 
   async function loadReleases() {
@@ -357,10 +530,10 @@
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
           <h3>No se encontraron lanzamientos</h3>
-          <p>${state.searchQuery ? 'Prueba a cambiar los términos de búsqueda o filtros.' : 'Tu colección está vacía. Escanea tu primer álbum físico con la cámara o añádelo manualmente.'}</p>
+          <p>${state.searchQuery ? 'Prueba a cambiar los términos de búsqueda o filtros.' : 'Tu colección está vacía. Escanea tu primer soporte físico con la cámara o añádelo manualmente.'}</p>
           <div style="display: flex; gap: 0.75rem;">
-            <button class="btn btn-primary" onclick="app.openScannerModal()">Escanear Portada</button>
-            <button class="btn btn-secondary" onclick="app.openCreateModal()">Alta Manual</button>
+            <button class="btn btn-primary" onclick="app.openScannerModal()">📸 Escanear Portada</button>
+            <button class="btn btn-secondary" onclick="app.openCreateModal()">➕ Alta Manual</button>
           </div>
         </div>
       `;
@@ -370,73 +543,82 @@
     grid.innerHTML = releases.map(release => createReleaseCardHtml(release)).join('');
   }
 
+  function getGoldmineShortCode(condition) {
+    if (!condition) return null;
+    const map = {
+      Mint: 'M',
+      NearMint: 'NM',
+      VeryGoodPlus: 'VG+',
+      VeryGood: 'VG',
+      GoodPlus: 'G+',
+      Good: 'G',
+      Fair: 'F',
+      Poor: 'P'
+    };
+    return map[condition] || condition;
+  }
+
+  // ============================================================================
+  // Punto #9: Tarjetas 100% Visuales (Crate Digging Puro sin caja inferior)
+  // ============================================================================
   function createReleaseCardHtml(r) {
     const formatClass = (r.format || 'Vinyl').toLowerCase();
     const statusClass = (r.status || 'PendingAnalysis').toLowerCase();
 
-    // Portada o representación visual con ranuras de vinilo
     const coverHtml = r.coverImageUrl
       ? `<img src="${escapeHtml(r.coverImageUrl)}" alt="${escapeHtml(r.title)}" class="cover-image" loading="lazy" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML=app.getPlaceholderGroovesHtml('${escapeHtml(r.format)}');">`
       : getPlaceholderGroovesHtml(r.format);
 
-    // Pill de condición Goldmine si está disponible
-    const conditionHtml = r.mediaCondition
-      ? `<div class="condition-pill" title="Condición Goldmine">🏅 ${escapeHtml(r.mediaCondition)}</div>`
+    const shortCondition = getGoldmineShortCode(r.mediaCondition);
+    const conditionOverlayHtml = shortCondition
+      ? `<span class="goldmine-corner-badge" title="Estado de Conservación: ${escapeHtml(r.mediaCondition)}">🏅 ${escapeHtml(shortCondition)}</span>`
       : '';
 
-    // Estado amigable
     let statusLabel = r.status;
     if (r.status === 'PendingAnalysis') statusLabel = 'Pendiente IA';
     else if (r.status === 'Identified') statusLabel = 'Identificado';
     else if (r.status === 'Enriched') statusLabel = 'Enriquecido';
     else if (r.status === 'Confirmed') statusLabel = 'Confirmado';
 
-    const yearLabel = r.releaseYear ? `${r.releaseYear}` : 'Año desc.';
-    const tracksCount = r.tracks ? r.tracks.length : 0;
-
-    return `
-      <article class="release-card" data-id="${r.id}">
-        <div class="card-cover-wrapper" onclick="app.openDetailModal('${r.id}')" style="cursor: pointer;">
-          ${coverHtml}
-          <div class="card-badges-top">
-            <span class="format-badge ${formatClass}">${escapeHtml(r.format)}</span>
-            <span class="status-badge ${statusClass}">
-              <span class="status-dot"></span>
-              ${escapeHtml(statusLabel)}
-            </span>
+    // Artefacto físico asomando según el soporte (Vinilo vs CD)
+    let physicalArtifactHtml = '';
+    if (formatClass === 'vinyl') {
+      physicalArtifactHtml = `
+        <div class="vinyl-disc-peek" aria-hidden="true">
+          <div class="vinyl-disc-grooves">
+            <div class="vinyl-disc-label"></div>
           </div>
         </div>
+      `;
+    } else if (formatClass === 'cd') {
+      physicalArtifactHtml = `
+        <div class="cd-disc-peek" aria-hidden="true">
+          <div class="cd-disc-hole"></div>
+        </div>
+      `;
+    }
 
-        <div class="card-body">
-          <h4 class="card-title" title="${escapeHtml(r.title)}">${escapeHtml(r.title)}</h4>
-          <div class="card-artist" title="${escapeHtml(r.artist)}">${escapeHtml(r.artist)}</div>
-
-          <div class="card-meta-row">
-            <span>${yearLabel}</span>
-            <span class="card-meta-dot">•</span>
-            <span>${escapeHtml(r.label || 'Sello no esp.')}</span>
-            <span class="card-meta-dot">•</span>
-            <span>${tracksCount} pistas</span>
-          </div>
-
-          ${conditionHtml ? `<div style="margin-bottom: 0.75rem;">${conditionHtml}</div>` : ''}
-
-          <div class="card-actions">
-            <button class="card-btn" onclick="app.openDetailModal('${r.id}')" title="Ver Ficha y Pistas">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-              Ver
-            </button>
-            <button class="card-btn" onclick="app.openConfirmModal('${r.id}')" title="Graduación Goldmine">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-              Calificar
-            </button>
-            <button class="card-btn" onclick="app.openEnrichModal('${r.id}')" title="Enriquecer con Discogs">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-              Discogs
-            </button>
-            <button class="card-btn card-btn-danger" onclick="app.deleteRelease('${r.id}')" title="Eliminar de la Colección" style="flex: 0 0 34px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
+    return `
+      <article class="release-card crate-card pure-visual-card format-${formatClass}" data-id="${r.id}" onclick="app.openDetailModal('${r.id}')">
+        <div class="crate-media-stage">
+          ${physicalArtifactHtml}
+          <div class="card-cover-wrapper">
+            ${formatClass === 'cd' ? '<div class="cd-spine-ribs" aria-hidden="true"></div><div class="cd-glare" aria-hidden="true"></div>' : '<div class="sleeve-spine" aria-hidden="true"></div>'}
+            ${coverHtml}
+            <div class="card-badges-top">
+              <span class="format-badge ${formatClass}">${escapeHtml(r.format)}</span>
+              <span class="status-badge ${statusClass}">
+                <span class="status-dot"></span>
+                ${escapeHtml(statusLabel)}
+              </span>
+            </div>
+            <div class="card-cover-bottom-bar">
+              <div class="card-cover-info">
+                <div class="card-cover-artist" title="${escapeHtml(r.artist)}">${escapeHtml(r.artist)}</div>
+                <div class="card-cover-title" title="${escapeHtml(r.title)}">${escapeHtml(r.title)}</div>
+              </div>
+              ${conditionOverlayHtml}
+            </div>
           </div>
         </div>
       </article>
@@ -457,8 +639,105 @@
   }
 
   // ============================================================================
-  // Filtros & Búsqueda
+  // Puntos #4, #5 y #6: Vistas Independientes (Bóveda vs Métricas) & Buscador Polimórfico
   // ============================================================================
+  function setCategory(category) {
+    state.currentCategory = category;
+    const tabs = document.querySelectorAll('#categoryTabs .category-tab-btn');
+    tabs.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.category === category);
+    });
+
+    const searchInput = document.getElementById('searchInput');
+    const formatFilters = document.getElementById('formatFilters');
+    const grid = document.getElementById('releasesGrid');
+    const comingSoon = document.getElementById('categoryComingSoonView');
+
+    // Actualizar placeholder del buscador polimórfico según categoría activa (#6)
+    if (searchInput) {
+      if (category === 'music') {
+        searchInput.placeholder = 'Buscar por artista, álbum, sello, código de barras...';
+      } else if (category === 'books') {
+        searchInput.placeholder = 'Buscar por título, autor, editorial, ISBN...';
+      } else if (category === 'games') {
+        searchInput.placeholder = 'Buscar por título, plataforma, estudio, EAN...';
+      }
+    }
+
+    if (category === 'music') {
+      if (formatFilters) formatFilters.style.display = 'flex';
+      if (grid) grid.style.display = '';
+      if (comingSoon) comingSoon.style.display = 'none';
+      return;
+    }
+
+    if (formatFilters) formatFilters.style.display = 'none';
+    if (grid) grid.style.display = 'none';
+    if (comingSoon) {
+      comingSoon.style.display = 'block';
+      const iconEl = document.getElementById('comingSoonIcon');
+      const badgeEl = document.getElementById('comingSoonBadge');
+      const titleEl = document.getElementById('comingSoonTitle');
+      const descEl = document.getElementById('comingSoonDescription');
+
+      if (category === 'books') {
+        if (iconEl) iconEl.textContent = '📚';
+        if (badgeEl) badgeEl.textContent = 'Motor ISBN Bookland Listo';
+        if (titleEl) titleEl.textContent = 'Bóveda Bibliográfica & Primeras Ediciones';
+        if (descEl) {
+          descEl.textContent = 'El decodificador local ZXing.Net ya detecta prefijos internacionales Bookland (978 y 979). Puedes probar el formulario contextual de Alta Manual adaptado a libros o usar el buscador superior.';
+        }
+      } else if (category === 'games') {
+        if (iconEl) iconEl.textContent = '🎮';
+        if (badgeEl) badgeEl.textContent = 'Conservación CIB (Caja, Manual y Soporte)';
+        if (titleEl) titleEl.textContent = 'Bóveda de Videojuegos Físicos & Retro';
+        if (descEl) {
+          descEl.textContent = 'Diseñado para coleccionistas de ediciones físicas de consola y PC. Puedes abrir el formulario contextual de Alta Manual adaptado a videojuegos desde el botón inferior.';
+        }
+      }
+    }
+  }
+
+  function switchMobileNav(section) {
+    const navItems = {
+      vault: document.getElementById('navBtnVault'),
+      search: document.getElementById('navBtnSearch'),
+      stats: document.getElementById('navBtnStats')
+    };
+
+    Object.entries(navItems).forEach(([key, el]) => {
+      if (el) el.classList.toggle('active', key === section);
+    });
+
+    const catalogView = document.getElementById('vaultCatalogView');
+    const metricsView = document.getElementById('vaultMetricsView');
+    const scrollStage = document.getElementById('vaultScrollStage');
+
+    if (section === 'stats') {
+      if (catalogView) catalogView.style.display = 'none';
+      if (metricsView) {
+        metricsView.style.display = 'block';
+        metricsView.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    // Mostrar vista de Catálogo (Bóveda o Buscar) en modo App Shell flex
+    if (metricsView) metricsView.style.display = 'none';
+    if (catalogView) catalogView.style.display = 'flex';
+
+    if (section === 'vault') {
+      if (scrollStage) scrollStage.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (section === 'search') {
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.classList.add('pulse-highlight');
+        setTimeout(() => searchInput.classList.remove('pulse-highlight'), 1000);
+      }
+    }
+  }
+
   function setFormatFilter(format) {
     state.currentFilter = format;
     const chips = document.querySelectorAll('#formatFilters .chip-btn');
@@ -472,22 +751,24 @@
     clearTimeout(state.searchDebounceTimer);
     state.searchDebounceTimer = setTimeout(() => {
       state.searchQuery = e.target.value;
-      loadReleases();
+      if (state.currentCategory === 'music') {
+        loadReleases();
+      }
     }, 350);
   }
 
   // ============================================================================
-  // Escáner de Cámara & Subida de Imágenes
+  // Punto #8: Escáner "1-Tap Lens" & Cero Basura en Base de Datos
   // ============================================================================
   function openScannerModal() {
     if (!state.token) {
-      showToast('Autenticación Necesaria', 'Inicia sesión antes de escanear un lanzamiento.', 'info');
+      showToast('Autenticación Necesaria', 'Inicia sesión antes de escanear un soporte físico.', 'info');
       openAuthModal('login');
       return;
     }
+    resetScanPreview();
     const modal = document.getElementById('scannerModal');
     if (modal) modal.classList.add('active');
-    switchScannerTab('camera');
     startCamera();
   }
 
@@ -498,32 +779,14 @@
     if (modal) modal.classList.remove('active');
   }
 
-  function switchScannerTab(tab) {
-    const tabCam = document.getElementById('tabLiveCamera');
-    const tabUp = document.getElementById('tabUploadFile');
-    const secCam = document.getElementById('liveCameraSection');
-    const secUp = document.getElementById('uploadFileSection');
-
-    if (tab === 'camera') {
-      tabCam.classList.add('active');
-      tabUp.classList.remove('active');
-      secCam.style.display = 'block';
-      secUp.style.display = 'none';
-      startCamera();
-    } else {
-      tabUp.classList.add('active');
-      tabCam.classList.remove('active');
-      secCam.style.display = 'none';
-      secUp.style.display = 'block';
-      stopCamera();
-    }
+  function switchScannerTab() {
+    startCamera();
   }
 
   async function startCamera() {
     stopCamera();
     const video = document.getElementById('cameraVideo');
     if (!video || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.warn('getUserMedia no soportado en este entorno. Usa subida de archivo o móvil nativo.');
       return;
     }
 
@@ -543,7 +806,6 @@
       await video.play();
     } catch (err) {
       console.warn('No se pudo acceder a la cámara WebRTC:', err.message);
-      // El usuario puede seguir usando el input nativo móvil o la pestaña de archivo
     }
   }
 
@@ -561,13 +823,16 @@
     startCamera();
   }
 
+  // 1-Tap Lens: Captura de cámara y envío automático inmediato a IA
   function captureFromCamera() {
     const video = document.getElementById('cameraVideo');
     const canvas = document.getElementById('cameraCanvas');
     if (!video || !canvas) return;
 
     if (!video.videoWidth || !video.videoHeight) {
-      showToast('Cámara No Lista', 'Espera a que el flujo de vídeo de la cámara esté activo.', 'error');
+      // Si en escritorio no hay webcam activa, abrir selector de galería directamente
+      const fileInput = document.getElementById('fileUploadInput');
+      if (fileInput) fileInput.click();
       return;
     }
 
@@ -578,68 +843,81 @@
 
     canvas.toBlob(blob => {
       if (blob) {
-        setScanFile(blob, `camera_capture_${Date.now()}.jpg`, 'Foto capturada con cámara');
+        state.selectedScanBlob = blob;
+        state.selectedScanFileName = `camera_capture_${Date.now()}.jpg`;
+        submitScan();
       }
     }, 'image/jpeg', 0.92);
   }
 
+  // 1-Tap Lens: Selección de galería y envío automático inmediato a IA
   function handleFileSelect(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
-    setScanFile(file, file.name, `Archivo (${(file.size / 1024).toFixed(1)} KB)`);
-  }
-
-  function setScanFile(blob, filename, description) {
-    state.selectedScanBlob = blob;
-    state.selectedScanFileName = filename;
-
-    const previewContainer = document.getElementById('scanPreviewContainer');
-    const previewImg = document.getElementById('scanPreviewImg');
-    const previewName = document.getElementById('scanPreviewName');
-    const previewSize = document.getElementById('scanPreviewSize');
-    const btnSubmit = document.getElementById('btnSubmitScan');
-
-    const objectUrl = URL.createObjectURL(blob);
-    previewImg.src = objectUrl;
-    previewName.textContent = filename;
-    previewSize.textContent = description;
-
-    previewContainer.style.display = 'flex';
-    btnSubmit.disabled = false;
+    state.selectedScanBlob = file;
+    state.selectedScanFileName = file.name;
+    submitScan();
   }
 
   function resetScanPreview() {
     state.selectedScanBlob = null;
     state.selectedScanFileName = null;
-    const previewContainer = document.getElementById('scanPreviewContainer');
-    const btnSubmit = document.getElementById('btnSubmitScan');
-    if (previewContainer) previewContainer.style.display = 'none';
-    if (btnSubmit) btnSubmit.disabled = true;
+    const aiOverlay = document.getElementById('scanAiOverlay');
+    const loadingState = document.getElementById('scanAiLoadingState');
+    const errorState = document.getElementById('scanAiErrorState');
+    if (aiOverlay) aiOverlay.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'flex';
+    if (errorState) errorState.style.display = 'none';
 
     const fileUploadInput = document.getElementById('fileUploadInput');
-    const mobileInput = document.getElementById('mobileDirectCameraInput');
     if (fileUploadInput) fileUploadInput.value = '';
-    if (mobileInput) mobileInput.value = '';
+  }
+
+  function retryScannerCapture() {
+    resetScanPreview();
+    startCamera();
+  }
+
+  function switchScannerToManualCreate() {
+    closeScannerModal();
+    openCreateModal();
+  }
+
+  function selectScanFormat(format) {
+    const input = document.getElementById('scanFormatSelect');
+    if (input) input.value = format;
   }
 
   async function submitScan() {
     if (!state.selectedScanBlob) {
-      showToast('Imagen requerida', 'Captura una foto con la cámara o selecciona un archivo.', 'error');
+      showToast('Imagen requerida', 'Captura una foto con la cámara o selecciona una de la galería.', 'error');
       return;
     }
 
-    const format = document.getElementById('scanFormatSelect').value;
-    const btnSubmit = document.getElementById('btnSubmitScan');
-    const btnSubmitText = document.getElementById('btnSubmitScanText');
+    const aiOverlay = document.getElementById('scanAiOverlay');
+    const loadingState = document.getElementById('scanAiLoadingState');
+    const errorState = document.getElementById('scanAiErrorState');
+    const errorText = document.getElementById('scanAiErrorText');
+    const aiTitle = document.getElementById('scanAiPhaseTitle');
+    const aiSubtitle = document.getElementById('scanAiPhaseSubtitle');
 
-    btnSubmit.disabled = true;
-    btnSubmitText.innerHTML = '<span class="spinner" style="display:inline-block; vertical-align:middle; margin-right:0.4rem;"></span> Ingestando con IA...';
+    if (aiOverlay) {
+      aiOverlay.style.display = 'flex';
+      if (loadingState) loadingState.style.display = 'flex';
+      if (errorState) errorState.style.display = 'none';
+      if (aiTitle) aiTitle.textContent = 'Analizando Soporte Físico...';
+      if (aiSubtitle) aiSubtitle.textContent = 'Fase 1: Buscando código EAN/UPC con ZXing.Net (~2 ms)...';
+    }
+
+    const phaseTimer = setTimeout(() => {
+      if (aiTitle) aiTitle.textContent = 'Inferencia Visual Multimodal';
+      if (aiSubtitle) aiSubtitle.textContent = 'Fase 2: Identificando portada con Gemini Flash & Catálogo...';
+    }, 450);
 
     const formData = new FormData();
     formData.append('file', state.selectedScanBlob, state.selectedScanFileName || 'scan.jpg');
-    const effectiveFormat = format === 'Auto' ? 'Vinyl' : format;
-    formData.append('format', effectiveFormat);
+    formData.append('format', 'Vinyl');
 
     try {
       const result = await apiFetch('/api/releases/scan', {
@@ -647,34 +925,133 @@
         body: formData
       });
 
-      showToast('Álbum Identificado', `Detectado: "${result.title}" de ${result.artist}`, 'success');
+      clearTimeout(phaseTimer);
+
+      // Si el backend no pudo identificar el soporte (Failed), NO se guarda basura en BD y mostramos opción de repetir o alta manual
+      const isUnrecognized = !result ||
+        result.status === 'Failed' ||
+        result.title === 'Lanzamiento pendiente de identificación';
+
+      if (isUnrecognized) {
+        if (loadingState) loadingState.style.display = 'none';
+        if (errorState) errorState.style.display = 'flex';
+        if (errorText) {
+          errorText.textContent = 'No hemos podido identificar el título ni el código de barras en esta imagen. No se ha guardado ningún registro vacío en tu bóveda.';
+        }
+        return;
+      }
+
+      showToast('Soporte Identificado', `Detectado: "${result.title}" de ${result.artist}`, 'success');
       closeScannerModal();
       await refreshAll();
 
-      // Abrir automáticamente la ficha o modal de calificación Goldmine
+      // Abrir automáticamente el Bottom Sheet de Estado de Conservación en 1-toque
       if (result.id) {
         openConfirmModal(result.id);
       }
     } catch (err) {
-      showToast('Fallo en Análisis de Imagen', err.message, 'error');
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmitText.textContent = 'Analizar con IA Multimodal';
+      clearTimeout(phaseTimer);
+      if (loadingState) loadingState.style.display = 'none';
+      if (errorState) errorState.style.display = 'flex';
+      if (errorText) {
+        errorText.textContent = err.message || 'No se pudo completar la identificación visual. Inténtalo de nuevo o usa el Alta Manual.';
+      }
     }
   }
 
   // ============================================================================
-  // Alta Manual de Lanzamientos
+  // Punto #7: Alta Manual Contextual según Categoría Activa (Música / Libros / Juegos)
   // ============================================================================
   function openCreateModal() {
     if (!state.token) {
-      showToast('Autenticación Necesaria', 'Inicia sesión antes de añadir un lanzamiento.', 'info');
+      showToast('Autenticación Necesaria', 'Inicia sesión antes de añadir un ejemplar.', 'info');
       openAuthModal('login');
       return;
     }
     const form = document.getElementById('createReleaseForm');
     if (form) form.reset();
-    toggleFormatFields('Vinyl');
+
+    const cat = state.currentCategory || 'music';
+    const modalTitle = document.getElementById('createModalTitle');
+    const lblArtist = document.getElementById('labelCreateArtist');
+    const inpArtist = document.getElementById('createArtist');
+    const lblTitle = document.getElementById('labelCreateTitle');
+    const inpTitle = document.getElementById('createTitle');
+    const lblFormat = document.getElementById('labelCreateFormat');
+    const selFormat = document.getElementById('createFormat');
+    const lblBarcode = document.getElementById('labelCreateBarcode');
+    const inpBarcode = document.getElementById('createBarcode');
+    const lblCatNo = document.getElementById('labelCreateCatalogNumber');
+    const inpCatNo = document.getElementById('createCatalogNumber');
+    const lblLabel = document.getElementById('labelCreateLabel');
+    const inpLabel = document.getElementById('createLabel');
+
+    if (cat === 'books') {
+      if (modalTitle) modalTitle.textContent = '📚 Alta Manual — Libro / Cómic';
+      if (lblArtist) lblArtist.innerHTML = 'Autor / Guionista <span class="required">*</span>';
+      if (inpArtist) inpArtist.placeholder = 'Ej. Isaac Asimov, Alan Moore';
+      if (lblTitle) lblTitle.innerHTML = 'Título de la Obra <span class="required">*</span>';
+      if (inpTitle) inpTitle.placeholder = 'Ej. Fundación, Watchmen';
+      if (lblFormat) lblFormat.innerHTML = 'Encuadernación / Formato <span class="required">*</span>';
+      if (selFormat) {
+        selFormat.innerHTML = `
+          <option value="BoxSet">Tapa Dura (Cartoné)</option>
+          <option value="CD">Rústica / Bolsillo</option>
+          <option value="Vinyl">Edición Especial / Gran Formato</option>
+        `;
+      }
+      if (lblBarcode) lblBarcode.textContent = 'Código ISBN-13 / EAN (978 / 979)';
+      if (inpBarcode) inpBarcode.placeholder = 'Ej. 9788497594257';
+      if (lblCatNo) lblCatNo.textContent = 'Colección / Serie Editorial';
+      if (inpCatNo) inpCatNo.placeholder = 'Ej. Nova Ciencia Ficción #12';
+      if (lblLabel) lblLabel.textContent = 'Editorial';
+      if (inpLabel) inpLabel.placeholder = 'Ej. Minotauro, Debolsillo';
+      toggleFormatFields('CD');
+    } else if (cat === 'games') {
+      if (modalTitle) modalTitle.textContent = '🎮 Alta Manual — Videojuego Físico';
+      if (lblArtist) lblArtist.innerHTML = 'Estudio / Desarrollador <span class="required">*</span>';
+      if (inpArtist) inpArtist.placeholder = 'Ej. FromSoftware, Nintendo EPD';
+      if (lblTitle) lblTitle.innerHTML = 'Título del Videojuego <span class="required">*</span>';
+      if (inpTitle) inpTitle.placeholder = 'Ej. Bloodborne, Zelda: Breath of the Wild';
+      if (lblFormat) lblFormat.innerHTML = 'Soporte / Plataforma <span class="required">*</span>';
+      if (selFormat) {
+        selFormat.innerHTML = `
+          <option value="CD">Disco Óptico (Blu-ray / DVD / CD-ROM)</option>
+          <option value="Cassette">Cartucho / Tarjeta Física</option>
+          <option value="BoxSet">Edición Coleccionista (Caja Grande)</option>
+        `;
+      }
+      if (lblBarcode) lblBarcode.textContent = 'Código de Barras (EAN / UPC)';
+      if (inpBarcode) inpBarcode.placeholder = 'Ej. 0045496420048';
+      if (lblCatNo) lblCatNo.textContent = 'Código de Región / Serial';
+      if (inpCatNo) inpCatNo.placeholder = 'Ej. CUSA-00207 / PAL-ESP';
+      if (lblLabel) lblLabel.textContent = 'Publisher / Distribuidora';
+      if (inpLabel) inpLabel.placeholder = 'Ej. Sony Interactive, Nintendo';
+      toggleFormatFields('CD');
+    } else {
+      if (modalTitle) modalTitle.textContent = '🎵 Alta Manual — Música';
+      if (lblArtist) lblArtist.innerHTML = 'Artista / Grupo <span class="required">*</span>';
+      if (inpArtist) inpArtist.placeholder = 'Ej. Pink Floyd';
+      if (lblTitle) lblTitle.innerHTML = 'Título del Álbum <span class="required">*</span>';
+      if (inpTitle) inpTitle.placeholder = 'Ej. The Dark Side of the Moon';
+      if (lblFormat) lblFormat.innerHTML = 'Formato Físico <span class="required">*</span>';
+      if (selFormat) {
+        selFormat.innerHTML = `
+          <option value="Vinyl">Vinilo</option>
+          <option value="CD">Compact Disc (CD)</option>
+          <option value="Cassette">Casete</option>
+          <option value="BoxSet">Box Set</option>
+        `;
+      }
+      if (lblBarcode) lblBarcode.textContent = 'Código de Barras (EAN / UPC)';
+      if (inpBarcode) inpBarcode.placeholder = 'Ej. 5099902894523';
+      if (lblCatNo) lblCatNo.textContent = 'Número de Catálogo';
+      if (inpCatNo) inpCatNo.placeholder = 'Ej. SHVL 804';
+      if (lblLabel) lblLabel.textContent = 'Sello Discográfico';
+      if (inpLabel) inpLabel.placeholder = 'Ej. Harvest / EMI';
+      toggleFormatFields('Vinyl');
+    }
+
     const modal = document.getElementById('createModal');
     if (modal) modal.classList.add('active');
   }
@@ -687,7 +1064,7 @@
   function toggleFormatFields(format) {
     const vinylFields = document.getElementById('vinylSpecificFields');
     if (vinylFields) {
-      vinylFields.style.display = format === 'Vinyl' ? 'grid' : 'none';
+      vinylFields.style.display = (format === 'Vinyl' && state.currentCategory === 'music') ? 'grid' : 'none';
     }
   }
 
@@ -706,7 +1083,7 @@
 
     let vinylSize = null;
     let vinylSpeed = null;
-    if (format === 'Vinyl') {
+    if (format === 'Vinyl' && state.currentCategory === 'music') {
       vinylSize = document.getElementById('createVinylSize').value;
       vinylSpeed = document.getElementById('createVinylSpeed').value;
     }
@@ -733,8 +1110,9 @@
         body: JSON.stringify(payload)
       });
 
-      showToast('Guardado', `"${created.title}" se ha añadido a tu colección.`, 'success');
+      showToast('Guardado en Bóveda', `"${created.title}" se ha añadido a tu colección.`, 'success');
       closeCreateModal();
+      setCategory('music');
       await refreshAll();
     } catch (err) {
       showToast('Error de Validación', err.message, 'error');
@@ -742,13 +1120,19 @@
   }
 
   // ============================================================================
-  // Modal de Detalle & Lista de Pistas (Tracklist)
+  // Punto #10: Modal de Detalle con Fondo Atmosférico (Contraportada / Portada) & Eliminar
   // ============================================================================
   async function openDetailModal(id) {
     const modal = document.getElementById('detailModal');
     const body = document.getElementById('detailModalBody');
     const headerTitle = document.getElementById('detailHeaderTitle');
     const footer = document.getElementById('detailModalFooter');
+    const backdropArt = document.getElementById('detailBackdropArt');
+
+    if (backdropArt) {
+      backdropArt.style.backgroundImage = 'none';
+      backdropArt.classList.remove('active', 'has-back-cover');
+    }
 
     modal.classList.add('active');
     body.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner" style="margin: 0 auto 0.5rem;"></div>Cargando ficha...</div>';
@@ -757,6 +1141,30 @@
       const release = await apiFetch(`/api/releases/${id}`);
       headerTitle.textContent = `${release.artist} — ${release.title}`;
 
+      // 1. Fondo atmosférico inicial con portada difuminada (para música sin contraportada, libros y videojuegos)
+      if (backdropArt && release.coverImageUrl) {
+        backdropArt.style.backgroundImage = `url('${encodeURI(release.coverImageUrl)}')`;
+        backdropArt.classList.add('active');
+      }
+
+      // 2. Si tiene ID de Discogs, consultar asíncronamente si existe imagen secundaria (contraportada real)
+      const discogsId = release.discogsReleaseId || release.discogsId;
+      if (discogsId && backdropArt) {
+        apiFetch(`/api/discogs/releases/${discogsId}/artwork`)
+          .then(art => {
+            if (art && art.backCoverImageUrl) {
+              backdropArt.style.backgroundImage = `url('${encodeURI(art.backCoverImageUrl)}')`;
+              backdropArt.classList.add('active', 'has-back-cover');
+              const badgeContainer = document.getElementById('detailBackCoverBadgeSlot');
+              if (badgeContainer) {
+                badgeContainer.innerHTML = '<span class="back-cover-indicator-pill" title="Contraportada oficial de Discogs proyectada en el fondo">🖼️ Contraportada en fondo</span>';
+              }
+            }
+          })
+          .catch(() => { /* Fallback silencioso a la portada difuminada */ });
+      }
+
+      const shortCond = getGoldmineShortCode(release.mediaCondition);
       const tracksHtml = (release.tracks && release.tracks.length > 0)
         ? `
           <div class="tracks-table-container">
@@ -780,21 +1188,22 @@
             </table>
           </div>
         `
-        : '<p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No hay pistas registradas todavía. Puedes enriquecer este álbum con Discogs para importar el tracklist oficial.</p>';
+        : '<p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No hay pistas registradas todavía. Usa "Buscar en Catálogo" para importar el tracklist y contraportada oficial.</p>';
 
       body.innerHTML = `
         <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
-          <div style="width: 140px; height: 140px; flex-shrink: 0; border-radius: var(--radius-md); overflow: hidden; background: #000;">
+          <div style="width: 140px; height: 140px; flex-shrink: 0; border-radius: var(--radius-md); overflow: hidden; background: #000; box-shadow: 0 8px 24px rgba(0,0,0,0.65);">
             ${release.coverImageUrl
               ? `<img src="${escapeHtml(release.coverImageUrl)}" alt="Portada" style="width: 100%; height: 100%; object-fit: cover;">`
               : getPlaceholderGroovesHtml(release.format)
             }
           </div>
           <div style="flex: 1; min-width: 200px;">
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.4rem;">
               <span class="format-badge ${release.format.toLowerCase()}">${escapeHtml(release.format)}</span>
               <span class="status-badge ${release.status.toLowerCase()}">${escapeHtml(release.status)}</span>
-              ${release.mediaCondition ? `<span class="condition-pill">🏅 ${escapeHtml(release.mediaCondition)}</span>` : ''}
+              ${shortCond ? `<span class="condition-pill" title="Conservación: ${escapeHtml(release.mediaCondition)}">🏅 ${escapeHtml(shortCond)} (${escapeHtml(release.mediaCondition)})</span>` : ''}
+              <span id="detailBackCoverBadgeSlot"></span>
             </div>
             <h3 style="font-size: 1.25rem; color: #fff; margin-bottom: 0.2rem;">${escapeHtml(release.title)}</h3>
             <div style="font-size: 1rem; color: var(--accent-gold); font-weight: 600; margin-bottom: 0.6rem;">${escapeHtml(release.artist)}</div>
@@ -804,15 +1213,15 @@
               <div><strong>Sello:</strong> ${escapeHtml(release.label || 'N/D')}</div>
               <div><strong>País:</strong> ${escapeHtml(release.country || 'N/D')}</div>
               <div><strong>Catálogo:</strong> ${escapeHtml(release.catalogueNumber || 'N/D')}</div>
-              <div><strong>Código de Barras:</strong> ${escapeHtml(release.barcode || 'N/D')}</div>
-              <div><strong>ID Discogs:</strong> ${release.discogsReleaseId ? `<a href="https://www.discogs.com/release/${release.discogsReleaseId}" target="_blank" rel="noopener" style="color: var(--accent-cyan);">${release.discogsReleaseId} ↗</a>` : 'Sin vincular'}</div>
+              <div><strong>Código EAN:</strong> ${escapeHtml(release.barcode || 'N/D')}</div>
+              <div><strong>Ref. Oficial:</strong> ${discogsId ? `<a href="https://www.discogs.com/release/${discogsId}" target="_blank" rel="noopener" style="color: var(--accent-cyan);">#${discogsId} ↗</a>` : 'Sin vincular'}</div>
             </div>
           </div>
         </div>
 
         ${release.notes ? `
-          <div style="background: rgba(11, 15, 23, 0.4); border-left: 3px solid var(--accent-gold); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.84rem;">
-            <strong>Notas del Coleccionista:</strong> ${escapeHtml(release.notes)}
+          <div style="background: rgba(11, 15, 23, 0.55); border-left: 3px solid var(--accent-gold); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.84rem;">
+            <strong>Notas de Custodia:</strong> ${escapeHtml(release.notes)}
           </div>
         ` : ''}
 
@@ -823,9 +1232,28 @@
       `;
 
       footer.innerHTML = `
-        <button class="btn btn-secondary" onclick="app.closeDetailModal()">Cerrar</button>
-        <button class="btn btn-outline-gold" onclick="app.closeDetailModal(); app.openConfirmModal('${release.id}')">Calificar Goldmine</button>
-        <button class="btn btn-primary" onclick="app.closeDetailModal(); app.openEnrichModal('${release.id}')">Enriquecer con Discogs</button>
+        <button type="button" class="btn-ghost-ruby" onclick="app.closeDetailModal(); app.deleteRelease('${release.id}')" title="Eliminar ejemplar de la bóveda">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Eliminar</span>
+        </button>
+        <div class="detail-footer-right">
+          <button type="button" class="btn btn-outline-gold btn-collector-action" onclick="app.closeDetailModal(); app.openConfirmModal('${release.id}')" title="Calificar Estado de Conservación">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>Conservación</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-collector-action" onclick="app.closeDetailModal(); app.openEnrichModal('${release.id}')" title="Buscar y vincular edición en el Catálogo Oficial">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Catálogo</span>
+          </button>
+        </div>
       `;
     } catch (err) {
       body.innerHTML = `<p style="color: var(--accent-ruby);">Error: ${escapeHtml(err.message)}</p>`;
@@ -838,16 +1266,79 @@
   }
 
   // ============================================================================
-  // Graduación Goldmine & Confirmación
+  // Punto #8: Estado de Conservación Universal (Goldmine / Bibliográfica / CIB)
   // ============================================================================
+  const GOLDMINE_DESCRIPTIONS = {
+    media: {
+      Mint: 'Mint (M) — Impecable, nuevo a estrenar',
+      NearMint: 'Near Mint (NM) — Casi perfecto, sin marcas',
+      VeryGoodPlus: 'Very Good Plus (VG+) — Excelente, marcas muy leves',
+      VeryGood: 'Very Good (VG) — Buen estado, uso moderado',
+      GoodPlus: 'Good Plus (G+) — Desgaste evidente pero funcional',
+      Good: 'Good (G) — Desgaste pronunciado',
+      Fair: 'Fair (F) — Daños visibles severos',
+      Poor: 'Poor (P) — Deteriorado o incompleto'
+    },
+    sleeve: {
+      Mint: 'Mint (M) — Impecable, precintado',
+      NearMint: 'Near Mint (NM) — Sin esquinas dobladas ni roces',
+      VeryGoodPlus: 'Very Good Plus (VG+) — Desgaste mínimo en lomo',
+      VeryGood: 'Very Good (VG) — Roces suaves en bordes',
+      GoodPlus: 'Good Plus (G+) — Rozaduras notables en cubierta',
+      Good: 'Good (G) — Marcas o dobleces visibles',
+      Fair: 'Fair (F) — Cubierta muy deteriorada',
+      Poor: 'Poor (P) — Sin cubierta o destruida'
+    }
+  };
+
+  function selectGoldmineGrade(target, grade) {
+    const isMedia = target === 'media';
+    const inputId = isMedia ? 'confirmMediaCondition' : 'confirmSleeveCondition';
+    const gridId = isMedia ? 'mediaGradeGrid' : 'sleeveGradeGrid';
+    const descId = isMedia ? 'mediaConditionDesc' : 'sleeveConditionDesc';
+
+    const inputEl = document.getElementById(inputId);
+    if (inputEl) inputEl.value = grade;
+
+    const chips = document.querySelectorAll(`#${gridId} .goldmine-chip`);
+    chips.forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.grade === grade);
+    });
+
+    const descEl = document.getElementById(descId);
+    if (descEl && GOLDMINE_DESCRIPTIONS[target] && GOLDMINE_DESCRIPTIONS[target][grade]) {
+      descEl.textContent = GOLDMINE_DESCRIPTIONS[target][grade];
+    }
+  }
+
   function openConfirmModal(releaseId) {
     document.getElementById('confirmReleaseId').value = releaseId;
     const release = state.releases.find(r => r.id === releaseId);
-    if (release) {
-      if (release.mediaCondition) document.getElementById('confirmMediaCondition').value = release.mediaCondition;
-      if (release.sleeveCondition) document.getElementById('confirmSleeveCondition').value = release.sleeveCondition;
-      if (release.notes) document.getElementById('confirmNotes').value = release.notes;
+    const mediaGrade = (release && release.mediaCondition) ? release.mediaCondition : 'NearMint';
+    const sleeveGrade = (release && release.sleeveCondition) ? release.sleeveCondition : 'NearMint';
+
+    // Adaptar insignia de estándar según categoría activa
+    const badgeEl = document.getElementById('conservationStandardBadge');
+    const lblMedia = document.getElementById('labelConfirmMedia');
+    const lblSleeve = document.getElementById('labelConfirmSleeve');
+    if (state.currentCategory === 'books') {
+      if (badgeEl) badgeEl.textContent = 'Escala Bibliográfica';
+      if (lblMedia) lblMedia.textContent = 'Páginas e Interior (Bloque)';
+      if (lblSleeve) lblSleeve.textContent = 'Cubierta, Lomo y Sobrecubierta';
+    } else if (state.currentCategory === 'games') {
+      if (badgeEl) badgeEl.textContent = 'Conservación CIB';
+      if (lblMedia) lblMedia.textContent = 'Disco Óptico / Cartucho';
+      if (lblSleeve) lblSleeve.textContent = 'Caja Original y Manual';
+    } else {
+      if (badgeEl) badgeEl.textContent = 'Estándar Goldmine';
+      if (lblMedia) lblMedia.textContent = 'Estado del Disco / Soporte (Media)';
+      if (lblSleeve) lblSleeve.textContent = 'Estado de Portada / Estuche (Sleeve)';
     }
+
+    selectGoldmineGrade('media', mediaGrade);
+    selectGoldmineGrade('sleeve', sleeveGrade);
+    document.getElementById('confirmNotes').value = (release && release.notes) ? release.notes : '';
+
     const modal = document.getElementById('confirmModal');
     if (modal) modal.classList.add('active');
   }
@@ -873,7 +1364,7 @@
         })
       });
 
-      showToast('Álbum Confirmado', 'Graduación Goldmine guardada con éxito.', 'success');
+      showToast('Estado de Conservación Guardado', 'La graduación de tu ejemplar ha quedado registrada.', 'success');
       closeConfirmModal();
       await refreshAll();
     } catch (err) {
@@ -882,20 +1373,30 @@
   }
 
   // ============================================================================
-  // Enriquecimiento con Discogs API
+  // Punto #11: "Buscar en Catálogo Oficial" (Fix ID: undefined + Toggle Selection + Auto-Search)
   // ============================================================================
   function openEnrichModal(releaseId) {
     document.getElementById('enrichReleaseId').value = releaseId;
     document.getElementById('enrichDiscogsId').value = '';
-    document.getElementById('enrichSearchResults').innerHTML = '';
+    const submitBtn = document.getElementById('btnSubmitEnrich');
+    if (submitBtn) submitBtn.disabled = true;
+
+    const resultsContainer = document.getElementById('enrichSearchResults');
+    if (resultsContainer) resultsContainer.innerHTML = '';
 
     const release = state.releases.find(r => r.id === releaseId);
-    if (release) {
-      document.getElementById('enrichSearchQuery').value = `${release.artist} ${release.title}`;
+    const queryInput = document.getElementById('enrichSearchQuery');
+    if (release && queryInput) {
+      queryInput.value = `${release.artist} ${release.title}`.trim();
     }
 
     const modal = document.getElementById('enrichModal');
     if (modal) modal.classList.add('active');
+
+    // Ejecutar la búsqueda automáticamente al abrir el Bottom Sheet
+    if (queryInput && queryInput.value.trim().length > 0) {
+      searchDiscogsForEnrich();
+    }
   }
 
   function closeEnrichModal() {
@@ -903,33 +1404,89 @@
     if (modal) modal.classList.remove('active');
   }
 
+  function selectCatalogEdition(element, releaseId) {
+    const hiddenInput = document.getElementById('enrichDiscogsId');
+    const submitBtn = document.getElementById('btnSubmitEnrich');
+    if (!hiddenInput || !element) return;
+
+    const alreadySelected = element.classList.contains('selected');
+
+    // Limpiar selección previa de todas las filas
+    const allItems = document.querySelectorAll('#enrichSearchResults .catalog-result-item');
+    allItems.forEach(item => item.classList.remove('selected'));
+
+    if (alreadySelected) {
+      // Si ya estaba marcada, se desmarca
+      hiddenInput.value = '';
+      if (submitBtn) submitBtn.disabled = true;
+    } else {
+      // Marcar la edición pulsada
+      element.classList.add('selected');
+      hiddenInput.value = String(releaseId);
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
   async function searchDiscogsForEnrich() {
     const query = document.getElementById('enrichSearchQuery').value.trim();
     const resultsContainer = document.getElementById('enrichSearchResults');
+    const hiddenInput = document.getElementById('enrichDiscogsId');
+    const submitBtn = document.getElementById('btnSubmitEnrich');
+
+    if (hiddenInput) hiddenInput.value = '';
+    if (submitBtn) submitBtn.disabled = true;
     if (!query) return;
 
-    resultsContainer.innerHTML = '<div style="font-size:0.8rem; color: var(--text-secondary); text-align: center; padding: 0.5rem;"><div class="spinner" style="display:inline-block; margin-right:0.3rem;"></div> Buscando en Discogs...</div>';
+    resultsContainer.innerHTML = `
+      <div style="font-size:0.84rem; color: var(--text-secondary); text-align: center; padding: 1.25rem;">
+        <div class="spinner" style="display:inline-block; vertical-align: middle; margin-right:0.4rem;"></div>
+        Consultando ediciones en el catálogo oficial...
+      </div>
+    `;
 
     try {
       const results = await apiFetch(`/api/discogs/search?query=${encodeURIComponent(query)}`);
       if (!results || results.length === 0) {
-        resultsContainer.innerHTML = '<div style="font-size:0.8rem; color: var(--text-muted); text-align: center; padding: 0.5rem;">No se encontraron resultados en Discogs.</div>';
+        resultsContainer.innerHTML = `
+          <div style="font-size:0.84rem; color: var(--text-muted); text-align: center; padding: 1.25rem;">
+            No se encontraron ediciones para esta búsqueda. Prueba con otro término.
+          </div>
+        `;
         return;
       }
 
-      resultsContainer.innerHTML = results.map(item => `
-        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.45rem 0.75rem; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: border-color 0.15s;"
-             onclick="document.getElementById('enrichDiscogsId').value = '${item.discogsReleaseId}'; this.style.borderColor='var(--accent-gold)';"
-             onmouseover="this.style.background='var(--bg-card-hover)'"
-             onmouseout="this.style.background='var(--bg-card)'">
-          <div style="font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 0.5rem;">
-            <strong>${escapeHtml(item.title)}</strong> ${item.year ? `(${item.year})` : ''}
+      resultsContainer.innerHTML = results.map(item => {
+        // Fix del bug ID: undefined -> DiscogsSearchResultDto expone 'releaseId'
+        const releaseId = item.releaseId ?? item.discogsReleaseId ?? item.id;
+        const thumbHtml = item.coverThumbUrl
+          ? `<img src="${escapeHtml(item.coverThumbUrl)}" alt="" class="catalog-result-thumb" loading="lazy" onerror="this.outerHTML='<div class=\\'catalog-result-thumb\\'>💿</div>'">`
+          : `<div class="catalog-result-thumb">💿</div>`;
+
+        const artistAndTitle = item.artist && item.artist !== 'Desconocido'
+          ? `${item.artist} — ${item.title}`
+          : item.title;
+
+        const metaParts = [
+          item.year ? `${item.year}` : null,
+          item.label || null,
+          item.country || null,
+          item.catalogueNumber ? `Cat: ${item.catalogueNumber}` : null
+        ].filter(Boolean).join(' • ');
+
+        return `
+          <div class="catalog-result-item" data-release-id="${releaseId}" onclick="app.selectCatalogEdition(this, '${releaseId}')">
+            ${thumbHtml}
+            <div class="catalog-result-info">
+              <div class="catalog-result-title" title="${escapeHtml(artistAndTitle)}">${escapeHtml(artistAndTitle)}</div>
+              <div class="catalog-result-meta">${escapeHtml(metaParts || 'Edición oficial registrada')}</div>
+              <span class="catalog-result-id-pill">ID: #${escapeHtml(releaseId)}</span>
+            </div>
+            <div class="catalog-check-indicator" aria-hidden="true">✓</div>
           </div>
-          <span style="font-size: 0.75rem; color: var(--accent-gold); font-weight: 700; white-space: nowrap;">ID: ${item.discogsReleaseId}</span>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     } catch (err) {
-      resultsContainer.innerHTML = `<div style="font-size:0.8rem; color: var(--accent-ruby); text-align: center; padding: 0.5rem;">Error: ${escapeHtml(err.message)}</div>`;
+      resultsContainer.innerHTML = `<div style="font-size:0.82rem; color: var(--accent-ruby); text-align: center; padding: 0.75rem;">Error: ${escapeHtml(err.message)}</div>`;
     }
   }
 
@@ -937,11 +1494,13 @@
     const releaseId = document.getElementById('enrichReleaseId').value;
     const discogsIdVal = document.getElementById('enrichDiscogsId').value;
     if (!discogsIdVal) {
-      showToast('ID Requerido', 'Introduce un ID de Discogs o selecciona uno de los resultados.', 'error');
+      showToast('Selecciona una Edición', 'Toca una de las ediciones de la lista para vincularla.', 'error');
       return;
     }
 
     const discogsReleaseId = parseInt(discogsIdVal, 10);
+    const submitBtn = document.getElementById('btnSubmitEnrich');
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
       await apiFetch(`/api/releases/${releaseId}/enrich`, {
@@ -949,11 +1508,12 @@
         body: JSON.stringify({ discogsReleaseId })
       });
 
-      showToast('Álbum Enriquecido', 'Metadatos y lista de pistas importados de Discogs.', 'success');
+      showToast('Edición Vinculada', 'Portada oficial, sello y lista de pistas importados del catálogo.', 'success');
       closeEnrichModal();
       await refreshAll();
     } catch (err) {
-      showToast('Error al Enriquecer', err.message, 'error');
+      showToast('Error al Vincular', err.message, 'error');
+      if (submitBtn) submitBtn.disabled = false;
     }
   }
 
@@ -962,14 +1522,14 @@
   // ============================================================================
   async function deleteRelease(id) {
     const release = state.releases.find(r => r.id === id);
-    const title = release ? `"${release.title}"` : 'este lanzamiento';
-    if (!confirm(`¿Estás seguro de que deseas eliminar ${title} de tu colección? Esta acción no se puede deshacer.`)) {
+    const title = release ? `"${release.title}"` : 'este ejemplar';
+    if (!confirm(`¿Estás seguro de que deseas eliminar ${title} de tu bóveda? Esta acción no se puede deshacer.`)) {
       return;
     }
 
     try {
       await apiFetch(`/api/releases/${id}`, { method: 'DELETE' });
-      showToast('Lanzamiento Eliminado', 'Se ha eliminado de tu bóveda.', 'info');
+      showToast('Ejemplar Eliminado', 'Se ha eliminado de tu bóveda.', 'info');
       await refreshAll();
     } catch (err) {
       showToast('Error al Eliminar', err.message, 'error');
@@ -977,50 +1537,21 @@
   }
 
   // ============================================================================
-  // Ciclo de Vida y Drag & Drop
+  // Ciclo de Vida e Inicialización
   // ============================================================================
   async function refreshAll() {
     await Promise.all([loadStatistics(), loadReleases()]);
   }
 
-  function setupDragAndDrop() {
-    const dropZone = document.getElementById('dropZone');
-    if (!dropZone) return;
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, e => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.add('dragover');
-      }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, e => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('dragover');
-      }, false);
-    });
-
-    dropZone.addEventListener('drop', e => {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files && files.length > 0) {
-        const file = files[0];
-        setScanFile(file, file.name, `Archivo (${(file.size / 1024).toFixed(1)} KB)`);
-      }
-    }, false);
-  }
-
-  // Inicialización de la aplicación
   async function init() {
-    renderAuthStatus();
-    setupDragAndDrop();
-
     if (state.token) {
-      // Comprobar validez de sesión con GET /auth/manage/info
       try {
+        const welcomeView = document.getElementById('welcomeView');
+        const vaultApp = document.getElementById('vaultApp');
+        if (welcomeView) welcomeView.style.display = 'none';
+        if (vaultApp) vaultApp.style.display = 'flex';
+
+        renderAuthStatus();
         await apiFetch('/auth/manage/info');
         await refreshAll();
       } catch (err) {
@@ -1028,19 +1559,26 @@
         logout(false);
       }
     } else {
-      renderReleases([]);
+      transitionToWelcome();
     }
   }
 
   // Exponer interfaz pública a window.app
   window.app = {
     init,
+    switchWelcomeTab,
+    toggleWelcomePasswordVisibility,
+    handleWelcomeSubmit,
+    transitionToVault,
+    transitionToWelcome,
     refreshAll,
     openAuthModal,
     closeAuthModal,
     switchAuthTab,
     handleAuthSubmit,
     logout,
+    setCategory,
+    switchMobileNav,
     setFormatFilter,
     handleSearchInput,
     openScannerModal,
@@ -1050,7 +1588,11 @@
     captureFromCamera,
     handleFileSelect,
     resetScanPreview,
+    retryScannerCapture,
+    switchScannerToManualCreate,
+    selectScanFormat,
     submitScan,
+    selectGoldmineGrade,
     openCreateModal,
     closeCreateModal,
     toggleFormatFields,
@@ -1062,17 +1604,16 @@
     submitConfirm,
     openEnrichModal,
     closeEnrichModal,
+    selectCatalogEdition,
     searchDiscogsForEnrich,
     submitEnrich,
     deleteRelease,
     getPlaceholderGroovesHtml
   };
 
-  // Arrancar al cargar DOM
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 })();
-

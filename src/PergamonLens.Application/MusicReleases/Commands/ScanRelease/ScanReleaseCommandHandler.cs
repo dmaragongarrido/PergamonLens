@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PergamonLens.Application.Common.Interfaces;
@@ -213,14 +213,15 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         }
         else
         {
-            bool hasRecognizedMetadata = barcode is not null || catalogueNumber is not null;
-            if (extraction.Confidence < 0.2 && !hasRecognizedMetadata)
-            {
-                release.MarkAsFailed("La IA visual no detectó metadatos legibles en la imagen.");
-            }
+            // Sin datos reconocidos (ni por Discogs ni título/artista por IA):
+            // Marcamos como Failed y NO persistimos en PostgreSQL para evitar registros huérfanos.
+            release.MarkAsFailed("La IA visual no detectó metadatos legibles en la imagen.");
         }
 
-        await _repository.AddAsync(release, cancellationToken);
+        if (release.Status != ProcessingStatus.Failed)
+        {
+            await _repository.AddAsync(release, cancellationToken);
+        }
 
         return release.ToDto();
     }

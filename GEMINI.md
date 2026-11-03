@@ -40,10 +40,11 @@ A partir del Hito 4, el proyecto opera rigurosamente bajo **GitHub Flow**:
 
 ---
 
-## 🔄 Protocolo de Inicio de Sesión
-Al comenzar una nueva conversación en este workspace:
+## 🔄 Protocolo de Inicio de Sesión & Comunicación en Tiempo Real
+Al comenzar una nueva conversación y durante todo el desarrollo en este workspace:
 1. **Revisar estado:** Consultar inmediatamente `PROGRESS.md` y `README.md`.
 2. **Resumen proactivo:** En tu primer saludo o respuesta, recuerda de forma breve y concisa:
    - En qué hito técnico exacto nos quedamos.
    - Cuál es la siguiente acción inmediata recomendada de desarrollo.
-3. **Mantener actualizado el sistema:** Actualizar `PROGRESS.md` con cada avance o hito completado.
+3. **Narración Paso a Paso en Tiempo Real (Obligatorio):** Antes de ejecutar herramientas (lectura/edición de archivos, comandos, tests), informa siempre a Diego con un mensaje breve de qué paso estás ejecutando (ej. *"Paso 2/5: Editando `styles.css` para añadir..."*) para que siempre sepa en qué estás trabajando y nunca parezca que el asistente está bloqueado en silencio.
+4. **Mantener actualizado el sistema:** Actualizar `PROGRESS.md` con cada avance o hito completado.

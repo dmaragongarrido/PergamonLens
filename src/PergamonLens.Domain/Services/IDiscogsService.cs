@@ -1,4 +1,4 @@
-using PergamonLens.Domain.ValueObjects;
+﻿using PergamonLens.Domain.ValueObjects;
 
 namespace PergamonLens.Domain.Services;
 
@@ -29,7 +29,8 @@ public sealed record DiscogsReleaseDetails(
     string? Country,
     string? CoverImageUrl,
     IReadOnlyList<DiscogsTrackItem> Tracks,
-    string? Format = null);
+    string? Format = null,
+    string? BackCoverImageUrl = null);
 
 /// <summary>
 /// Representa un corte musical extraído de Discogs.

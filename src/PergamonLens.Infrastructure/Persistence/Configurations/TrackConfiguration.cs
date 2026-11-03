@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.ValueObjects;
@@ -15,6 +15,9 @@ public sealed class TrackConfiguration : IEntityTypeConfiguration<Track>
         builder.ToTable("Tracks");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.Id)
+            .ValueGeneratedNever();
 
         builder.Property(x => x.Position)
             .IsRequired()

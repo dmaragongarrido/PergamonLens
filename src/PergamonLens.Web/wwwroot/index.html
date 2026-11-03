@@ -10,207 +10,396 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <a href="#" class="brand" onclick="app.refreshAll(); return false;">
-          <div class="brand-icon">🏛️</div>
-          <div class="brand-text">
-            <h1>PergamonLens</h1>
-            <span class="brand-tagline">Visual Vault & AI Collector</span>
-          </div>
-        </a>
-
-        <div class="header-actions">
-          <div id="authStatusContainer">
-            <!-- Renderizado dinámico: botón login o perfil de usuario -->
-          </div>
+    <!-- ==================================================================== -->
+    <!-- Pilar 1: Welcome & Sign-In Screen (Visible when state.token == null) -->
+    <!-- ==================================================================== -->
+    <div id="welcomeView" class="welcome-screen">
+      <div class="welcome-backdrop-glow"></div>
+      <div class="welcome-card">
+        <div class="welcome-brand">
+          <div class="welcome-emblem">🏛️</div>
+          <h1 class="welcome-title">PergamonLens</h1>
+          <p class="welcome-subtitle">Bóveda digital para coleccionistas físicos con IA multimodal</p>
         </div>
+
+        <!-- Selector Táctil de Pastilla (Pill Tabs) -->
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab-btn active" id="tabWelcomeLogin" onclick="app.switchWelcomeTab('login')">
+            Iniciar Sesión
+          </button>
+          <button type="button" class="auth-tab-btn" id="tabWelcomeRegister" onclick="app.switchWelcomeTab('register')">
+            Crear Cuenta
+          </button>
+        </div>
+
+        <!-- Contenedor de Errores Inline Sutil -->
+        <div id="welcomeError" class="auth-inline-error" style="display: none;">
+          <svg class="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span id="welcomeErrorText"></span>
+        </div>
+
+        <!-- Formulario de Autenticación -->
+        <form id="welcomeForm" onsubmit="app.handleWelcomeSubmit(event)" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="welcomeEmail">Correo Electrónico</label>
+            <div class="input-with-icon">
+              <svg class="input-leading-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              <input type="email" id="welcomeEmail" class="form-input" required placeholder="coleccionista@ejemplo.com" autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1.15rem;">
+            <label class="form-label" for="welcomePassword">Contraseña</label>
+            <div class="input-with-icon">
+              <svg class="input-leading-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input type="password" id="welcomePassword" class="form-input" required placeholder="••••••••" minlength="6" autocomplete="current-password">
+              <button type="button" class="password-toggle-btn" id="btnTogglePassword" onclick="app.toggleWelcomePasswordVisibility()" title="Mostrar/ocultar contraseña" aria-label="Mostrar u ocultar contraseña">
+                <svg id="iconEyeOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg id="iconEyeClosed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="form-help" id="welcomePasswordHelp" style="display: none;">
+              Mínimo 6 caracteres (mayúsculas, minúsculas, números o símbolos).
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-welcome-submit" id="btnWelcomeSubmit">
+            <span id="btnWelcomeSubmitSpinner" class="spinner" style="display: none; width: 18px; height: 18px; border-width: 2px;"></span>
+            <span id="btnWelcomeSubmitText">Abrir mi Bóveda ➔</span>
+          </button>
+        </form>
       </div>
-    </header>
+    </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Hero & Quick Actions -->
-      <section class="vault-hero">
-        <div class="hero-header">
-          <div class="hero-title">
-            <h2>Bóveda de Colección</h2>
-            <p>Escanear. Identificar. Preservar tus joyas físicas con IA multimodal.</p>
+    <!-- ==================================================================== -->
+    <!-- Pilar 2: Bóveda de Colección (Visible con sesión iniciada)          -->
+    <!-- ==================================================================== -->
+    <div id="vaultApp" class="vault-app" style="display: none;">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <a href="#" class="brand" onclick="app.switchMobileNav('vault'); app.refreshAll(); return false;">
+            <div class="brand-icon">🏛️</div>
+            <div class="brand-text">
+              <h1>PergamonLens</h1>
+              <span class="brand-tagline">Visual Vault &amp; AI Collector</span>
+            </div>
+          </a>
+
+          <div class="header-actions">
+            <div id="authStatusContainer">
+              <!-- Renderizado dinámico: perfil de usuario compacto -->
+            </div>
           </div>
-          <div class="hero-buttons">
-            <button class="btn btn-primary" onclick="app.openScannerModal()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
-                <circle cx="12" cy="13" r="3"></circle>
-              </svg>
-              Escanear con Cámara
-            </button>
-            <button class="btn btn-secondary" onclick="app.openCreateModal()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Alta Manual
-            </button>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- ================================================================ -->
+        <!-- VISTA 1: Catálogo Visual de la Bóveda (#vaultCatalogView)        -->
+        <!-- ================================================================ -->
+        <div id="vaultCatalogView" class="vault-catalog-shell">
+          <!-- Zona Superior Fija: Selector Polimórfico + Buscador + Filtros -->
+          <div class="vault-fixed-controls">
+            <section class="vault-top-bar" id="vaultToolbar" aria-label="Categorías y Búsqueda">
+              <div class="category-tabs" id="categoryTabs">
+                <button type="button" class="category-tab-btn active" data-category="music" onclick="app.setCategory('music')">
+                  <span class="category-tab-icon">🎵</span>
+                  <span class="category-tab-label">Música</span>
+                  <span class="category-tab-count" id="categoryMusicCount">0</span>
+                </button>
+                <button type="button" class="category-tab-btn" data-category="books" onclick="app.setCategory('books')">
+                  <span class="category-tab-icon">📚</span>
+                  <span class="category-tab-label">Libros</span>
+                  <span class="category-badge-soon">ISBN</span>
+                </button>
+                <button type="button" class="category-tab-btn" data-category="games" onclick="app.setCategory('games')">
+                  <span class="category-tab-icon">🎮</span>
+                  <span class="category-tab-label">Videojuegos</span>
+                  <span class="category-badge-soon">CIB</span>
+                </button>
+              </div>
+
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
+              </div>
+            </section>
+
+            <!-- Filtros de Formato Físico (Música) -->
+            <div class="filter-chips" id="formatFilters">
+              <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+              <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
+              <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
+              <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
+              <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
+            </div>
+          </div>
+
+          <!-- Única Zona con Scroll: Lienzo de Portadas / Categorías -->
+          <div class="vault-scroll-stage" id="vaultScrollStage">
+            <!-- Releases Grid (Crate Digging Visual Cards) -->
+            <section id="releasesGrid" class="vault-grid">
+              <!-- Renderizado dinámico de tarjetas 100% visuales -->
+            </section>
+
+            <!-- Polymorphic Category Coming Soon View (Books / Video Games) -->
+            <section id="categoryComingSoonView" class="polymorphic-coming-soon" style="display: none;">
+              <div class="coming-soon-card">
+                <div class="coming-soon-icon" id="comingSoonIcon">📚</div>
+                <div class="coming-soon-badge" id="comingSoonBadge">Arquitectura Polimórfica Preparada</div>
+                <h3 id="comingSoonTitle">Bóveda Bibliográfica &amp; Bookland ISBN</h3>
+                <p id="comingSoonDescription">
+                  El motor determinista ZXing.Net ya detecta prefijos internacionales Bookland (978 / 979). Muy pronto podrás catalogar primeras ediciones, tapa dura y bolsillo con enriquecimiento automático de editorial y autor.
+                </p>
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-primary" onclick="app.openCreateModal()">
+                    ➕ Probar Ficha de Alta Contextual
+                  </button>
+                  <button type="button" class="btn btn-outline-gold" onclick="app.setCategory('music')">
+                    Volver a Colección Musical
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 
-        <!-- Metrics Dashboard -->
-        <div class="stats-grid" id="statsDashboard">
-          <div class="stat-card">
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Lanzamientos</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statVinyls">0</div>
-            <div class="stat-label">Vinilos</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statCds">0</div>
-            <div class="stat-label">CDs</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statCassettes">0</div>
-            <div class="stat-label">Casetes</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statTracks">0</div>
-            <div class="stat-label">Pistas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statConfirmed">0</div>
-            <div class="stat-label">Confirmados</div>
-          </div>
-        </div>
-      </section>
+        <!-- ================================================================ -->
+        <!-- VISTA 2: Panel Dedicado de Métricas (#vaultMetricsView)          -->
+        <!-- ================================================================ -->
+        <section id="vaultMetricsView" class="vault-metrics-view" style="display: none;">
+          <div class="vault-hero">
+            <div class="hero-header-compact">
+              <div class="hero-title">
+                <h2>📊 Métricas de tu Bóveda</h2>
+                <p>Inventario auditado de soportes físicos, pistas catalogadas y estado de verificación</p>
+              </div>
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="app.switchMobileNav('vault')">
+                🏛️ Volver a las Portadas
+              </button>
+            </div>
 
-      <!-- Toolbar & Filters -->
-      <section class="vault-toolbar">
-        <div class="search-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Desglose de Colección Musical -->
+            <div class="metrics-section-label">🎵 Colección Fonográfica (Música)</div>
+            <div class="stats-grid" id="statsDashboard">
+              <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Lanzamientos</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statVinyls">0</div>
+                <div class="stat-label">Vinilos</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statCds">0</div>
+                <div class="stat-label">CDs</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statCassettes">0</div>
+                <div class="stat-label">Casetes</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statTracks">0</div>
+                <div class="stat-label">Pistas</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statConfirmed">0</div>
+                <div class="stat-label">Confirmados</div>
+              </div>
+            </div>
+
+            <!-- Resumen Polimórfico de Otras Categorías -->
+            <div class="metrics-section-label" style="margin-top: 1.5rem;">🏛️ Expansión Multi-Categoría</div>
+            <div class="metrics-polymorphic-grid">
+              <div class="metrics-poly-card">
+                <div class="metrics-poly-icon">📚</div>
+                <div class="metrics-poly-info">
+                  <h4>Biblioteca &amp; Cómics (ISBN)</h4>
+                  <p>0 ejemplares registrados • Soporte EAN Bookland 978/979 preparado</p>
+                </div>
+              </div>
+              <div class="metrics-poly-card">
+                <div class="metrics-poly-icon">🎮</div>
+                <div class="metrics-poly-info">
+                  <h4>Videojuegos Físicos (CIB)</h4>
+                  <p>0 ediciones registradas • Graduación de caja, manual y soporte</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Mobile Bottom Navigation Bar (The Thumb Zone) -->
+      <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación rápida móvil">
+        <button type="button" class="bottom-nav-item active" id="navBtnVault" onclick="app.switchMobileNav('vault')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Bóveda</span>
+        </button>
+
+        <button type="button" class="bottom-nav-item" id="navBtnSearch" onclick="app.switchMobileNav('search')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
+          <span>Buscar</span>
+        </button>
+
+        <div class="bottom-nav-fab-wrapper">
+          <button type="button" class="bottom-nav-fab" onclick="app.openScannerModal()" title="Escanear Soporte Físico con IA" aria-label="Escanear con Cámara">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+              <circle cx="12" cy="13" r="3"></circle>
+            </svg>
+          </button>
+          <span class="bottom-nav-fab-label">Escanear</span>
         </div>
 
-        <div class="filter-chips" id="formatFilters">
-          <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
-          <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
-          <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
-          <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
-          <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
+        <button type="button" class="bottom-nav-item" id="navBtnStats" onclick="app.switchMobileNav('stats')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Métricas</span>
+        </button>
+
+        <button type="button" class="bottom-nav-item" id="navBtnCreate" onclick="app.openCreateModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Alta</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- Modals & Bottom Sheets                                               -->
+    <!-- ==================================================================== -->
+
+    <!-- 1-Tap Lens Scanner Modal (Immersive Bottom Sheet) -->
+    <div class="modal-overlay bottom-sheet-overlay" id="scannerModal">
+      <div class="modal-dialog bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeScannerModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
         </div>
-      </section>
-
-      <!-- Releases Grid -->
-      <section id="releasesGrid" class="vault-grid">
-        <!-- Renderizado dinámico de tarjetas -->
-      </section>
-    </main>
-
-    <!-- Modals -->
-
-    <!-- Scanner Modal -->
-    <div class="modal-overlay" id="scannerModal">
-      <div class="modal-dialog">
         <div class="modal-header">
           <h3>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
               <circle cx="12" cy="13" r="3"></circle>
             </svg>
-            Escanear Álbum Físico
+            Escáner Inteligente (1-Tap Lens)
           </h3>
           <button class="modal-close-btn" onclick="app.closeScannerModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label">Formato Esperado</label>
-            <select id="scanFormatSelect" class="form-select">
-              <option value="Auto" selected>Auto (Detección Automática: CD, Vinilo, Casete)</option>
-              <option value="Vinyl">Vinilo (LP, Maxi, Single)</option>
-              <option value="CD">Compact Disc (CD)</option>
-              <option value="Cassette">Casete de Audio</option>
-              <option value="BoxSet">Box Set Recopilatorio</option>
-            </select>
-          </div>
+        <div class="modal-body" style="position: relative; padding-bottom: 1.5rem;">
+          <input type="hidden" id="scanFormatSelect" value="Auto">
 
-          <!-- Pestañas de modo de escaneo: Cámara en Vivo o Archivo -->
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <button class="chip-btn active" id="tabLiveCamera" onclick="app.switchScannerTab('camera')">Cámara en Vivo</button>
-            <button class="chip-btn" id="tabUploadFile" onclick="app.switchScannerTab('upload')">Subir Fotografía</button>
-          </div>
-
-          <!-- Vista de Cámara en Vivo -->
           <div id="liveCameraSection">
             <div class="scanner-viewport">
               <video id="cameraVideo" autoplay playsinline muted></video>
               <canvas id="cameraCanvas"></canvas>
               <div class="scanner-overlay">
-                <div class="scanner-target-box"></div>
+                <div class="scanner-target-box">
+                  <div class="scanner-laser-line"></div>
+                </div>
               </div>
             </div>
+            <p class="scanner-hint-text">Apunta a la portada o al código de barras. Al disparar o elegir de galería se analizará al instante.</p>
+
+            <!-- Única barra limpia de 3 controles: Girar | Disparador 1-Tap | Galería -->
             <div class="scanner-controls">
-              <button class="btn btn-secondary btn-sm" onclick="app.toggleCameraFacing()">
+              <button type="button" class="btn btn-secondary btn-sm scanner-side-btn" onclick="app.toggleCameraFacing()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                Girar Cámara
+                <span>Girar</span>
               </button>
-              <button class="camera-shutter-btn" id="shutterBtn" onclick="app.captureFromCamera()" title="Capturar Fotografía">
+
+              <button type="button" class="camera-shutter-btn" id="shutterBtn" onclick="app.captureFromCamera()" title="Capturar e Identificar con IA">
                 <div class="camera-shutter-inner"></div>
               </button>
-              <label class="btn btn-secondary btn-sm" for="mobileDirectCameraInput">
+
+              <label class="btn btn-secondary btn-sm scanner-side-btn" for="fileUploadInput">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                Móvil Nativo
+                <span>Galería</span>
               </label>
-              <!-- Input nativo de cámara para móviles -->
-              <input type="file" id="mobileDirectCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="app.handleFileSelect(event)">
+              <input type="file" id="fileUploadInput" accept="image/*" style="display:none;" onchange="app.handleFileSelect(event)">
             </div>
           </div>
 
-          <!-- Vista de Subida de Archivo / Drag & Drop -->
-          <div id="uploadFileSection" style="display: none;">
-            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileUploadInput').click()">
-              <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Arrastra una foto o haz clic para seleccionarla</div>
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">Portada, lomo o código de barras (JPG, PNG, WebP)</div>
+          <!-- Overlay Dinámico de Reconocimiento IA + Estado de No Reconocido -->
+          <div id="scanAiOverlay" class="scan-ai-overlay" style="display: none;">
+            <!-- Estado 1: Analizando en curso -->
+            <div id="scanAiLoadingState" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+              <div class="scan-ai-pulse-ring">
+                <span class="scan-ai-icon">🏛️</span>
+              </div>
+              <h4 id="scanAiPhaseTitle">Analizando Soporte Físico...</h4>
+              <p id="scanAiPhaseSubtitle">Fase 1: Buscando código EAN/UPC con ZXing.Net (~2 ms)...</p>
+              <div class="scan-ai-progress-bar">
+                <div class="scan-ai-progress-fill"></div>
+              </div>
             </div>
-            <input type="file" id="fileUploadInput" accept="image/*" style="display:none;" onchange="app.handleFileSelect(event)">
-          </div>
 
-          <!-- Previsualización de escaneo -->
-          <div id="scanPreviewContainer" style="display: none; align-items: center; gap: 1rem; background: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-md);">
-            <img id="scanPreviewImg" src="" alt="Previsualización" style="width: 70px; height: 70px; object-fit: cover; border-radius: var(--radius-sm);">
-            <div style="flex: 1;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: #fff;" id="scanPreviewName">Foto capturada</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary);" id="scanPreviewSize">Listo para análisis con IA</div>
+            <!-- Estado 2: No reconocido (Cero basura en BD) -->
+            <div id="scanAiErrorState" style="display: none; flex-direction: column; align-items: center; width: 100%; max-width: 340px;">
+              <div class="scan-ai-error-icon">🔍</div>
+              <h4 style="color: #fff; font-size: 1.05rem; margin-bottom: 0.35rem;">Soporte no identificado</h4>
+              <p id="scanAiErrorText" style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.45;">
+                No hemos podido leer con nitidez la portada ni el código de barras. No se ha guardado ningún registro vacío en tu bóveda.
+              </p>
+              <div style="display: flex; gap: 0.65rem; width: 100%; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="app.retryScannerCapture()">
+                  📸 Tomar otra foto
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="app.switchScannerToManualCreate()">
+                  ➕ Usar Alta Manual
+                </button>
+              </div>
             </div>
-            <button class="btn btn-sm btn-secondary" onclick="app.resetScanPreview()">Cambiar</button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="app.closeScannerModal()">Cancelar</button>
-          <button class="btn btn-primary" id="btnSubmitScan" onclick="app.submitScan()" disabled>
-            <span id="btnSubmitScanText">Analizar con IA Multimodal</span>
-          </button>
         </div>
       </div>
     </div>
 
-    <!-- Create Manual Modal -->
-    <div class="modal-overlay" id="createModal">
-      <div class="modal-dialog modal-lg">
+    <!-- Contextual Create Manual Bottom Sheet (#createModal) -->
+    <div class="modal-overlay bottom-sheet-overlay" id="createModal">
+      <div class="modal-dialog modal-lg bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeCreateModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
+        </div>
         <div class="modal-header">
-          <h3>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Alta Manual de Lanzamiento
+          <h3 id="createModalTitle">
+            🎵 Alta Manual — Música
           </h3>
           <button class="modal-close-btn" onclick="app.closeCreateModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -220,18 +409,18 @@
           <form id="createReleaseForm" onsubmit="app.handleCreateSubmit(event)">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Artista / Grupo <span class="required">*</span></label>
+                <label class="form-label" id="labelCreateArtist">Artista / Grupo <span class="required">*</span></label>
                 <input type="text" id="createArtist" class="form-input" required placeholder="Ej. Pink Floyd">
               </div>
               <div class="form-group">
-                <label class="form-label">Título del Álbum <span class="required">*</span></label>
+                <label class="form-label" id="labelCreateTitle">Título del Álbum <span class="required">*</span></label>
                 <input type="text" id="createTitle" class="form-input" required placeholder="Ej. The Dark Side of the Moon">
               </div>
             </div>
 
             <div class="form-row" style="margin-top: 1rem;">
               <div class="form-group">
-                <label class="form-label">Formato Físico <span class="required">*</span></label>
+                <label class="form-label" id="labelCreateFormat">Formato Físico <span class="required">*</span></label>
                 <select id="createFormat" class="form-select" onchange="app.toggleFormatFields(this.value)">
                   <option value="Vinyl">Vinilo</option>
                   <option value="CD">Compact Disc (CD)</option>
@@ -240,7 +429,7 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Año de Lanzamiento</label>
+                <label class="form-label" id="labelCreateYear">Año de Lanzamiento</label>
                 <input type="number" id="createYear" class="form-input" min="1900" max="2100" placeholder="Ej. 1973">
               </div>
             </div>
@@ -266,22 +455,22 @@
 
             <div class="form-row" style="margin-top: 1rem;">
               <div class="form-group">
-                <label class="form-label">Código de Barras (EAN / UPC)</label>
+                <label class="form-label" id="labelCreateBarcode">Código de Barras (EAN / UPC)</label>
                 <input type="text" id="createBarcode" class="form-input" placeholder="Ej. 5099902894523">
               </div>
               <div class="form-group">
-                <label class="form-label">Número de Catálogo</label>
+                <label class="form-label" id="labelCreateCatalogNumber">Número de Catálogo</label>
                 <input type="text" id="createCatalogNumber" class="form-input" placeholder="Ej. SHVL 804">
               </div>
             </div>
 
             <div class="form-row" style="margin-top: 1rem;">
               <div class="form-group">
-                <label class="form-label">Sello Discográfico</label>
+                <label class="form-label" id="labelCreateLabel">Sello Discográfico</label>
                 <input type="text" id="createLabel" class="form-input" placeholder="Ej. Harvest / EMI">
               </div>
               <div class="form-group">
-                <label class="form-label">País de Edición</label>
+                <label class="form-label" id="labelCreateCountry">País de Edición</label>
                 <input type="text" id="createCountry" class="form-input" placeholder="Ej. UK, Japón, España">
               </div>
             </div>
@@ -306,89 +495,110 @@
       </div>
     </div>
 
-    <!-- Detail & Tracks Modal -->
-    <div class="modal-overlay" id="detailModal">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-header">
+    <!-- Detail & Tracks Bottom Sheet with Hybrid Back-Cover / Ambient Backdrop -->
+    <div class="modal-overlay bottom-sheet-overlay" id="detailModal">
+      <div class="modal-dialog modal-lg bottom-sheet-dialog detail-sheet-with-backdrop">
+        <!-- Fondo atmosférico degradado (Contraportada Discogs o Portada difuminada) -->
+        <div class="detail-backdrop-art" id="detailBackdropArt"></div>
+
+        <div class="bottom-sheet-handle" onclick="app.closeDetailModal()" title="Deslizar o pulsar para cerrar" style="position: relative; z-index: 2;">
+          <span></span>
+        </div>
+        <div class="modal-header" style="position: relative; z-index: 2;">
           <h3 id="detailHeaderTitle">Detalle del Lanzamiento</h3>
           <button class="modal-close-btn" onclick="app.closeDetailModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
-        <div class="modal-body" id="detailModalBody">
+        <div class="modal-body" id="detailModalBody" style="position: relative; z-index: 2;">
           <!-- Renderizado dinámico de ficha y tracklist -->
         </div>
-        <div class="modal-footer" id="detailModalFooter">
-          <!-- Acciones contextuales del lanzamiento -->
+        <div class="modal-footer" id="detailModalFooter" style="position: relative; z-index: 2;">
+          <!-- Acciones contextuales del lanzamiento (incluye Eliminar, Conservación y Catálogo) -->
         </div>
       </div>
     </div>
 
-    <!-- Confirm / Goldmine Grading Modal -->
-    <div class="modal-overlay" id="confirmModal">
-      <div class="modal-dialog">
+    <!-- Confirm / 1-Touch Estado de Conservación Bottom Sheet -->
+    <div class="modal-overlay bottom-sheet-overlay" id="confirmModal">
+      <div class="modal-dialog bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeConfirmModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
+        </div>
         <div class="modal-header">
-          <h3>
+          <h3 style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            Graduación Goldmine & Confirmación
+            <span>Estado de Conservación</span>
+            <span class="conservation-standard-badge" id="conservationStandardBadge">Estándar Goldmine</span>
           </h3>
           <button class="modal-close-btn" onclick="app.closeConfirmModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.85rem; color: var(--text-secondary);">
-            Califica el estado físico de conservación según el estándar oficial internacional <strong>Goldmine</strong>.
-          </p>
           <input type="hidden" id="confirmReleaseId">
+          <input type="hidden" id="confirmMediaCondition" value="NearMint">
+          <input type="hidden" id="confirmSleeveCondition" value="NearMint">
 
+          <!-- Selector Táctil 1-Toque: Soporte Físico (Media Condition) -->
           <div class="form-group">
-            <label class="form-label">Estado del Soporte Físico (Media Condition)</label>
-            <select id="confirmMediaCondition" class="form-select">
-              <option value="Mint">Mint (M) — Impecable, nuevo a estrenar</option>
-              <option value="NearMint" selected>Near Mint (NM) — Casi perfecto, sin marcas</option>
-              <option value="VeryGoodPlus">Very Good Plus (VG+) — Excelente, marcas leves de uso</option>
-              <option value="VeryGood">Very Good (VG) — Buen estado, ruido superficial leve</option>
-              <option value="GoodPlus">Good Plus (G+) — Marcas evidentes, desgaste apreciable</option>
-              <option value="Good">Good (G) — Desgaste pronunciado, no salta</option>
-              <option value="Fair">Fair (F) — Daños visibles severos</option>
-              <option value="Poor">Poor (P) — Injugable o roto</option>
-            </select>
+            <div class="goldmine-header-row">
+              <label class="form-label" id="labelConfirmMedia">Estado del Disco / Soporte (Media)</label>
+              <span class="goldmine-live-desc" id="mediaConditionDesc">Near Mint (NM) — Casi perfecto, sin marcas</span>
+            </div>
+            <div class="goldmine-touch-grid" id="mediaGradeGrid">
+              <button type="button" class="goldmine-chip" data-grade="Mint" onclick="app.selectGoldmineGrade('media', 'Mint')">M</button>
+              <button type="button" class="goldmine-chip active" data-grade="NearMint" onclick="app.selectGoldmineGrade('media', 'NearMint')">NM</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGoodPlus" onclick="app.selectGoldmineGrade('media', 'VeryGoodPlus')">VG+</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGood" onclick="app.selectGoldmineGrade('media', 'VeryGood')">VG</button>
+              <button type="button" class="goldmine-chip" data-grade="GoodPlus" onclick="app.selectGoldmineGrade('media', 'GoodPlus')">G+</button>
+              <button type="button" class="goldmine-chip" data-grade="Good" onclick="app.selectGoldmineGrade('media', 'Good')">G</button>
+              <button type="button" class="goldmine-chip" data-grade="Fair" onclick="app.selectGoldmineGrade('media', 'Fair')">F</button>
+              <button type="button" class="goldmine-chip" data-grade="Poor" onclick="app.selectGoldmineGrade('media', 'Poor')">P</button>
+            </div>
           </div>
 
-          <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label">Estado de la Portada / Funda (Sleeve Condition)</label>
-            <select id="confirmSleeveCondition" class="form-select">
-              <option value="Mint">Mint (M) — Impecable, precintada</option>
-              <option value="NearMint" selected>Near Mint (NM) — Sin esquinas dobladas ni roces</option>
-              <option value="VeryGoodPlus">Very Good Plus (VG+) — Desgaste mínimo en esquinas o lomo</option>
-              <option value="VeryGood">Very Good (VG) — Ringwear moderado o pequeñas hendiduras</option>
-              <option value="GoodPlus">Good Plus (G+) — Rozaduras notables o esquinas rotas</option>
-              <option value="Good">Good (G) — Roturas en bordes o marcas de cinta</option>
-              <option value="Fair">Fair (F) — Muy deteriorada o manchada</option>
-              <option value="Poor">Poor (P) — Incompleta o destruida</option>
-            </select>
+          <!-- Selector Táctil 1-Toque: Portada / Funda (Sleeve Condition) -->
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <div class="goldmine-header-row">
+              <label class="form-label" id="labelConfirmSleeve">Estado de Portada / Estuche (Sleeve)</label>
+              <span class="goldmine-live-desc" id="sleeveConditionDesc">Near Mint (NM) — Sin esquinas dobladas ni roces</span>
+            </div>
+            <div class="goldmine-touch-grid" id="sleeveGradeGrid">
+              <button type="button" class="goldmine-chip" data-grade="Mint" onclick="app.selectGoldmineGrade('sleeve', 'Mint')">M</button>
+              <button type="button" class="goldmine-chip active" data-grade="NearMint" onclick="app.selectGoldmineGrade('sleeve', 'NearMint')">NM</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGoodPlus" onclick="app.selectGoldmineGrade('sleeve', 'VeryGoodPlus')">VG+</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGood" onclick="app.selectGoldmineGrade('sleeve', 'VeryGood')">VG</button>
+              <button type="button" class="goldmine-chip" data-grade="GoodPlus" onclick="app.selectGoldmineGrade('sleeve', 'GoodPlus')">G+</button>
+              <button type="button" class="goldmine-chip" data-grade="Good" onclick="app.selectGoldmineGrade('sleeve', 'Good')">G</button>
+              <button type="button" class="goldmine-chip" data-grade="Fair" onclick="app.selectGoldmineGrade('sleeve', 'Fair')">F</button>
+              <button type="button" class="goldmine-chip" data-grade="Poor" onclick="app.selectGoldmineGrade('sleeve', 'Poor')">P</button>
+            </div>
           </div>
 
-          <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label">Notas de Custodia y Calificación</label>
-            <textarea id="confirmNotes" class="form-textarea" placeholder="Ej. Prensaje japonés original de 1978 con OBI strip intacto y folleto lírico..."></textarea>
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label class="form-label">Notas de Custodia y Edición (Opcional)</label>
+            <textarea id="confirmNotes" class="form-textarea" style="min-height: 64px;" placeholder="Ej. Prensaje japonés original con OBI strip intacto..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="app.closeConfirmModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="app.submitConfirm()">Confirmar en Bóveda</button>
+          <button class="btn btn-primary" onclick="app.submitConfirm()">Preservar en Bóveda ➔</button>
         </div>
       </div>
     </div>
 
-    <!-- Enrich Discogs Modal -->
-    <div class="modal-overlay" id="enrichModal">
-      <div class="modal-dialog">
+    <!-- Buscar en Catálogo Oficial Bottom Sheet (#enrichModal) -->
+    <div class="modal-overlay bottom-sheet-overlay" id="enrichModal">
+      <div class="modal-dialog bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeEnrichModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
+        </div>
         <div class="modal-header">
-          <h3>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            Enriquecer con Discogs API
+          <h3 style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Buscar en Catálogo Oficial</span>
+            <span class="conservation-standard-badge" id="catalogSourceBadge">Fuente: Discogs</span>
           </h3>
           <button class="modal-close-btn" onclick="app.closeEnrichModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -396,28 +606,31 @@
         </div>
         <div class="modal-body">
           <input type="hidden" id="enrichReleaseId">
+          <input type="hidden" id="enrichDiscogsId">
+
           <div class="form-group">
-            <label class="form-label">ID de Lanzamiento en Discogs (Release ID)</label>
-            <input type="number" id="enrichDiscogsId" class="form-input" placeholder="Ej. 249504" required>
-            <div class="form-help">Encuentra el ID al final de la URL en Discogs (ej. discogs.com/release/<strong>249504</strong>).</div>
-          </div>
-          <div style="margin-top: 1rem;">
-            <label class="form-label">Buscar en Discogs</label>
+            <label class="form-label">Buscar Edición por Artista, Álbum, Sello o Catálogo</label>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
-              <input type="text" id="enrichSearchQuery" class="form-input" placeholder="Artista o álbum...">
-              <button class="btn btn-secondary" onclick="app.searchDiscogsForEnrich()">Buscar</button>
+              <input type="text" id="enrichSearchQuery" class="form-input" placeholder="Ej. Pink Floyd Dark Side..." onkeydown="if(event.key==='Enter'){event.preventDefault();app.searchDiscogsForEnrich();}">
+              <button type="button" class="btn btn-secondary" onclick="app.searchDiscogsForEnrich()">Buscar</button>
             </div>
-            <div id="enrichSearchResults" style="margin-top: 0.75rem; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem;"></div>
+            <div class="form-help" style="margin-top: 0.35rem;">
+              Toca una edición para seleccionarla (o vuelve a tocarla para desmarcarla). Al vincular se importará portada oficial, sello y listado de pistas.
+            </div>
           </div>
+
+          <div id="enrichSearchResults" class="catalog-results-list"></div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="app.closeEnrichModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="app.submitEnrich()">Vincular & Enriquecer</button>
+          <button class="btn btn-primary" id="btnSubmitEnrich" onclick="app.submitEnrich()" disabled>
+            Vincular Edición Seleccionada ➔
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Auth Modal (Login / Register) -->
+    <!-- Auth Modal (Fallback Secondary) -->
     <div class="modal-overlay" id="authModal">
       <div class="modal-dialog">
         <div class="modal-header">
@@ -462,4 +675,3 @@
   <script src="js/app.js"></script>
 </body>
 </html>
-

@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PergamonLens.Domain.Services;
@@ -90,6 +90,7 @@ public sealed class DiscogsService : IDiscogsService
             string? label = response.Labels?.FirstOrDefault()?.Name;
             string? catNo = response.Labels?.FirstOrDefault()?.Catno;
             string? coverImageUrl = response.Images?.FirstOrDefault()?.Uri;
+            string? backCoverImageUrl = response.Images?.Skip(1).FirstOrDefault()?.Uri;
             string? format = response.Formats?.FirstOrDefault()?.Name;
 
             var tracks = (response.Tracklist ?? [])
@@ -110,7 +111,8 @@ public sealed class DiscogsService : IDiscogsService
                 response.Country,
                 coverImageUrl,
                 tracks,
-                format);
+                format,
+                backCoverImageUrl);
         }
         catch (HttpRequestException ex)
         {
