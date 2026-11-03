@@ -128,7 +128,11 @@ PergamonLens/
   - Tarjetas físicas ***Crate Digging* 100% visuales** con vinilo surcado o disco óptico CD iridiscente asomando de la funda.
   - Escáner **1-Tap Lens** de fricción cero (sin registros huérfanos en PostgreSQL cuando una imagen no es reconocida) y graduación de **Estado de Conservación en 1 toque**.
   - Ficha de Detalle en *Bottom Sheet* con **contraportada oficial de Discogs proyectada en el fondo** y buscador visual de ediciones en el catálogo oficial.
-- [ ] **Hito 8: CI/CD, Despliegue & Producción**
+- [ ] **Hito 8: Expansión Polimórfica Multi-Categoría (Libros & Videojuegos)**
+  - Persistencia real en PostgreSQL y modelo de dominio polimórfico para coleccionistas de `🎵 Música`, `📚 Libros` (ISBN Bookland 978/979, autor, editorial, encuadernación) y `🎮 Videojuegos` (plataforma, estudio, región, conservación CIB).
+  - Autodetección visual de categoría y formato mediante IA multimodal (`Gemini Flash`) + `ZXing.Net` en el escáner *1-Tap Lens*.
+  - Enriquecimiento canónico con catálogos oficiales de literatura y videojuegos, y tarjetas físicas dedicadas en la bóveda.
+- [ ] **Hito 9: CI/CD, Despliegue & Producción**
   - Dockerización final multi-stage y optimización del pipeline de GitHub Actions.
   - Configuración de variables de entorno, secrets y publicación en producción.
   - Verificación final de escaparate técnico de autor.
