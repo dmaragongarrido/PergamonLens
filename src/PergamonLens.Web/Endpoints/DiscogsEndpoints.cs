@@ -1,7 +1,8 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using PergamonLens.Application.DTOs;
 using PergamonLens.Application.MusicReleases.Queries.SearchDiscogs;
+using PergamonLens.Domain.Services;
 
 namespace PergamonLens.Web.Endpoints;
 
@@ -43,6 +44,14 @@ public static class DiscogsEndpoints
         .Produces<IReadOnlyList<DiscogsSearchResultDto>>(StatusCodes.Status200OK)
         .ProducesValidationProblem()
         .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/releases/{releaseId:long}/artwork", async (long releaseId, IDiscogsService discogsService, CancellationToken ct) =>
+        {
+            var details = await discogsService.GetReleaseDetailsAsync(releaseId, ct);
+            if (details is null) return Results.NotFound();
+            return Results.Ok(new { details.CoverImageUrl, details.BackCoverImageUrl });
+        })
+        .WithName("GetDiscogsReleaseArtwork");
 
         return app;
     }

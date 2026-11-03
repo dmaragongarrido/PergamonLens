@@ -2254,3 +2254,454 @@ html, body {
   box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
   transform: translateY(-1px);
 }
+
+
+/* ==========================================================================
+   Refinamiento Integral UI/UX (11 Puntos de Pulido de Autor - Hito 7)
+   ========================================================================== */
+
+/* #1 & #3: Cero Scroll Horizontal en Móvil (Login, Header y Bóveda) */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.welcome-screen {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.welcome-backdrop-glow {
+  width: min(500px, 100%);
+  height: min(500px, 100%);
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding: 0.65rem 0.85rem;
+  }
+  .header-content {
+    gap: 0.5rem;
+  }
+  .brand {
+    min-width: 0;
+    gap: 0.55rem;
+  }
+  .brand-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .brand-text h1 {
+    font-size: 1.15rem;
+  }
+  .brand-tagline {
+    display: none;
+  }
+  .header-actions {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .user-profile-badge {
+    padding: 0.25rem 0.35rem 0.25rem 0.55rem;
+    gap: 0.4rem;
+    max-width: 195px;
+  }
+  .user-email-text {
+    max-width: 96px;
+    font-size: 0.75rem;
+  }
+}
+
+/* #4, #5 & #6: Cabecera Unificada (Selector 3 Columnas + Buscador Polimórfico) */
+.vault-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vault-top-bar .category-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.vault-top-bar .search-box {
+  flex: 1;
+  min-width: 240px;
+}
+
+#vaultCatalogView .filter-chips {
+  margin-bottom: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .vault-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .vault-top-bar .category-tabs {
+    width: 100%;
+  }
+  .vault-top-bar .category-tab-btn {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.8rem;
+    gap: 0.3rem;
+    justify-content: center;
+  }
+  .vault-top-bar .category-tab-count,
+  .vault-top-bar .category-badge-soon {
+    font-size: 0.62rem;
+    padding: 0.08rem 0.35rem;
+  }
+  .vault-top-bar .search-box {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* #4: Vista Dedicada de Métricas (#vaultMetricsView) */
+.vault-metrics-view {
+  animation: fadeInApp 0.3s ease-out;
+}
+
+.vault-metrics-view .hero-header-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.metrics-section-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-gold);
+  margin-bottom: 0.65rem;
+}
+
+.metrics-polymorphic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.85rem;
+}
+
+.metrics-poly-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: rgba(11, 15, 23, 0.55);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.95rem 1.1rem;
+}
+
+.metrics-poly-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--accent-gold-subtle);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.metrics-poly-info h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.15rem;
+}
+
+.metrics-poly-info p {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* #8: Escáner 1-Tap Lens & Estado No Reconocido */
+.scanner-hint-text {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0.55rem 0 0.25rem;
+}
+
+.scanner-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 1rem;
+  padding-top: 0.35rem;
+}
+
+.scanner-side-btn {
+  min-width: 102px;
+  justify-content: center;
+}
+
+.scan-ai-error-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.14);
+  border: 2px solid rgba(239, 68, 68, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+  margin-bottom: 0.9rem;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.25);
+}
+
+.conservation-standard-badge {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--accent-gold);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.03em;
+}
+
+/* #9: Tarjetas 100% Visuales (Crate Digging Puro sin caja inferior) */
+.crate-card.pure-visual-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding: 0;
+}
+
+.crate-card.pure-visual-card .crate-media-stage {
+  border-bottom: none;
+  padding: 0.85rem 1.7rem 0.85rem 0.85rem;
+}
+
+.card-cover-bottom-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 2.4rem 0.6rem 0.55rem;
+  background: linear-gradient(
+    to top,
+    rgba(6, 9, 15, 0.96) 0%,
+    rgba(6, 9, 15, 0.82) 52%,
+    rgba(6, 9, 15, 0.35) 80%,
+    transparent 100%
+  );
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.45rem;
+  pointer-events: none;
+}
+
+.card-cover-info {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.card-cover-artist {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.1rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.card-cover-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+}
+
+.card-cover-bottom-bar .goldmine-corner-badge {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* #10: Fondo Atmosférico Degradado (Contraportada / Portada Difuminada) en #detailModal */
+.detail-sheet-with-backdrop {
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-backdrop-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  filter: blur(16px) saturate(1.25);
+  transform: scale(1.08);
+  pointer-events: none;
+  transition: background-image 0.45s ease, opacity 0.4s ease, filter 0.45s ease;
+}
+
+.detail-backdrop-art.active {
+  opacity: 0.24;
+}
+
+.detail-backdrop-art.has-back-cover {
+  opacity: 0.28;
+  filter: blur(4px) saturate(1.1);
+  transform: scale(1.03);
+}
+
+.detail-backdrop-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(13, 19, 29, 0.62) 0%,
+    rgba(13, 19, 29, 0.86) 55%,
+    rgba(13, 19, 29, 0.96) 100%
+  );
+}
+
+.back-cover-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  background: rgba(11, 15, 23, 0.75);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--radius-full);
+}
+
+/* #11: Lista Visual de Ediciones en "Buscar en Catálogo Oficial" (#enrichModal) */
+.catalog-results-list {
+  margin-top: 0.85rem;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.2rem;
+}
+
+.catalog-result-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(11, 15, 23, 0.75);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.catalog-result-item:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(25, 35, 50, 0.75);
+}
+
+.catalog-result-item.selected {
+  border-color: var(--accent-gold);
+  background: rgba(245, 158, 11, 0.15);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.catalog-result-thumb {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.catalog-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.catalog-result-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catalog-result-meta {
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  margin-top: 0.12rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catalog-result-id-pill {
+  font-size: 0.66rem;
+  font-family: monospace;
+  color: var(--accent-gold);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  padding: 0.08rem 0.4rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.2rem;
+  display: inline-block;
+}
+
+.catalog-check-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.catalog-result-item.selected .catalog-check-indicator {
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  color: #0b0f17;
+}
