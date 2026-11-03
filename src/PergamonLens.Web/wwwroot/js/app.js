@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * PERGAMONLENS — Frontend Application Controller
  * Vanilla JS SPA with WebRTC camera capture & REST API client
@@ -136,6 +136,179 @@
   }
 
   // ============================================================================
+  // Pilar 1: Pantalla de Bienvenida & Auth Flow
+  // ============================================================================
+  function switchWelcomeTab(mode) {
+    state.authMode = mode;
+    const tabLogin = document.getElementById('tabWelcomeLogin');
+    const tabRegister = document.getElementById('tabWelcomeRegister');
+    const submitBtnText = document.getElementById('btnWelcomeSubmitText');
+    const passwordHelp = document.getElementById('welcomePasswordHelp');
+    const errorContainer = document.getElementById('welcomeError');
+
+    if (errorContainer) errorContainer.style.display = 'none';
+
+    if (mode === 'login') {
+      if (tabLogin) tabLogin.classList.add('active');
+      if (tabRegister) tabRegister.classList.remove('active');
+      if (submitBtnText) submitBtnText.textContent = 'Abrir mi Bóveda ➔';
+      if (passwordHelp) passwordHelp.style.display = 'none';
+    } else {
+      if (tabRegister) tabRegister.classList.add('active');
+      if (tabLogin) tabLogin.classList.remove('active');
+      if (submitBtnText) submitBtnText.textContent = 'Crear Cuenta de Coleccionista ➔';
+      if (passwordHelp) passwordHelp.style.display = 'block';
+    }
+  }
+
+  function toggleWelcomePasswordVisibility() {
+    const input = document.getElementById('welcomePassword');
+    const iconOpen = document.getElementById('iconEyeOpen');
+    const iconClosed = document.getElementById('iconEyeClosed');
+    if (!input) return;
+
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (iconOpen) iconOpen.style.display = 'none';
+      if (iconClosed) iconClosed.style.display = 'block';
+    } else {
+      input.type = 'password';
+      if (iconOpen) iconOpen.style.display = 'block';
+      if (iconClosed) iconClosed.style.display = 'none';
+    }
+  }
+
+  function showWelcomeError(message) {
+    const container = document.getElementById('welcomeError');
+    const textEl = document.getElementById('welcomeErrorText');
+    if (container && textEl) {
+      textEl.textContent = message;
+      container.style.display = 'flex';
+    }
+  }
+
+  function transitionToVault() {
+    const welcomeView = document.getElementById('welcomeView');
+    const vaultApp = document.getElementById('vaultApp');
+
+    if (welcomeView) {
+      welcomeView.classList.add('fade-out');
+      setTimeout(() => {
+        welcomeView.style.display = 'none';
+        welcomeView.classList.remove('fade-out');
+        if (vaultApp) {
+          vaultApp.style.display = 'flex';
+          vaultApp.classList.add('fade-in');
+          setTimeout(() => vaultApp.classList.remove('fade-in'), 400);
+        }
+      }, 350);
+    } else if (vaultApp) {
+      vaultApp.style.display = 'flex';
+    }
+    renderAuthStatus();
+  }
+
+  function transitionToWelcome() {
+    const welcomeView = document.getElementById('welcomeView');
+    const vaultApp = document.getElementById('vaultApp');
+
+    if (vaultApp) vaultApp.style.display = 'none';
+    if (welcomeView) {
+      welcomeView.style.display = 'flex';
+      welcomeView.classList.remove('fade-out');
+    }
+    const pwdInput = document.getElementById('welcomePassword');
+    if (pwdInput) {
+      pwdInput.value = '';
+      pwdInput.type = 'password';
+    }
+    const iconOpen = document.getElementById('iconEyeOpen');
+    const iconClosed = document.getElementById('iconEyeClosed');
+    if (iconOpen) iconOpen.style.display = 'block';
+    if (iconClosed) iconClosed.style.display = 'none';
+
+    const err = document.getElementById('welcomeError');
+    if (err) err.style.display = 'none';
+
+    switchWelcomeTab('login');
+  }
+
+  async function handleWelcomeSubmit(e) {
+    e.preventDefault();
+    const errorContainer = document.getElementById('welcomeError');
+    if (errorContainer) errorContainer.style.display = 'none';
+
+    const emailInput = document.getElementById('welcomeEmail');
+    const passwordInput = document.getElementById('welcomePassword');
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+
+    if (!email || !password) {
+      showWelcomeError('Por favor ingresa tu correo electrónico y contraseña.');
+      return;
+    }
+
+    if (state.authMode === 'register' && password.length < 6) {
+      showWelcomeError('La contraseña debe contener al menos 6 caracteres.');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btnWelcomeSubmit');
+    const submitSpinner = document.getElementById('btnWelcomeSubmitSpinner');
+    const submitText = document.getElementById('btnWelcomeSubmitText');
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (submitSpinner) submitSpinner.style.display = 'inline-block';
+    if (submitText) {
+      submitText.textContent = state.authMode === 'register'
+        ? 'Creando cuenta de coleccionista...'
+        : 'Verificando credenciales...';
+    }
+
+    try {
+      if (state.authMode === 'register') {
+        // 1. Registro nativo en ASP.NET Core Identity
+        await apiFetch('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        showToast('Cuenta Creada', 'Registro completado con éxito. Iniciando sesión...', 'success');
+      }
+
+      // 2. Login para obtener el token Bearer
+      const loginResult = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+
+      if (loginResult && loginResult.accessToken) {
+        state.token = loginResult.accessToken;
+        state.userEmail = email;
+        localStorage.setItem(STORAGE_TOKEN_KEY, state.token);
+        localStorage.setItem(STORAGE_EMAIL_KEY, state.userEmail);
+
+        transitionToVault();
+        showToast('Bienvenido a PergamonLens', `Sesión iniciada como ${email}`, 'success');
+
+        await refreshAll();
+      } else {
+        throw new Error('No se recibió el token de acceso del servidor.');
+      }
+    } catch (err) {
+      console.error('Error de autenticación:', err);
+      showWelcomeError(err.message || 'Error al autenticar. Revisa tus credenciales.');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitSpinner) submitSpinner.style.display = 'none';
+      if (submitText) {
+        submitText.textContent = state.authMode === 'register'
+          ? 'Crear Cuenta de Coleccionista ➔'
+          : 'Abrir mi Bóveda ➔';
+      }
+    }
+  }
+
+  // ============================================================================
   // Autenticación de Usuario
   // ============================================================================
   function renderAuthStatus() {
@@ -260,7 +433,7 @@
     localStorage.removeItem(STORAGE_TOKEN_KEY);
     localStorage.removeItem(STORAGE_EMAIL_KEY);
 
-    renderAuthStatus();
+    transitionToWelcome();
     renderStatistics(null);
     renderReleases([]);
 
@@ -1015,12 +1188,17 @@
 
   // Inicialización de la aplicación
   async function init() {
-    renderAuthStatus();
     setupDragAndDrop();
 
     if (state.token) {
       // Comprobar validez de sesión con GET /auth/manage/info
       try {
+        const welcomeView = document.getElementById('welcomeView');
+        const vaultApp = document.getElementById('vaultApp');
+        if (welcomeView) welcomeView.style.display = 'none';
+        if (vaultApp) vaultApp.style.display = 'flex';
+
+        renderAuthStatus();
         await apiFetch('/auth/manage/info');
         await refreshAll();
       } catch (err) {
@@ -1028,13 +1206,18 @@
         logout(false);
       }
     } else {
-      renderReleases([]);
+      transitionToWelcome();
     }
   }
 
   // Exponer interfaz pública a window.app
   window.app = {
     init,
+    switchWelcomeTab,
+    toggleWelcomePasswordVisibility,
+    handleWelcomeSubmit,
+    transitionToVault,
+    transitionToWelcome,
     refreshAll,
     openAuthModal,
     closeAuthModal,

@@ -1137,3 +1137,292 @@ html, body {
   }
 }
 
+
+
+/* ==========================================================================
+   Pilar 1: Pantalla de Bienvenida & Auth Flow (Subfase 7.1)
+   ========================================================================== */
+
+.vault-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  transition: opacity 0.35s ease;
+}
+
+.vault-app.fade-in {
+  animation: fadeInApp 0.4s ease-out;
+}
+
+@keyframes fadeInApp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-main);
+  background: radial-gradient(circle at 50% 20%, rgba(245, 158, 11, 0.16) 0%, rgba(19, 27, 38, 0.85) 45%, var(--bg-main) 80%);
+  overflow-y: auto;
+  padding: 1.5rem;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.welcome-screen.fade-out {
+  opacity: 0;
+  transform: scale(0.97);
+  pointer-events: none;
+}
+
+.welcome-backdrop-glow {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, transparent 65%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.welcome-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  background: rgba(19, 27, 38, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem 2rem;
+  box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.08);
+  animation: welcomeCardEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes welcomeCardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.welcome-brand {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.welcome-emblem {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.35));
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+  animation: emblemPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes emblemPulse {
+  0% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
+  100% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.45); }
+}
+
+.welcome-title {
+  font-size: 1.95rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(120deg, #ffffff 40%, var(--accent-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
+}
+
+.welcome-subtitle {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-top: 0.4rem;
+  line-height: 1.45;
+}
+
+/* Pill Tabs */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(11, 15, 23, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  margin-bottom: 1.5rem;
+  gap: 4px;
+}
+
+.auth-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  font-family: inherit;
+}
+
+.auth-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.auth-tab-btn.active {
+  background: linear-gradient(135deg, var(--accent-gold), #b45309);
+  color: #0b0f17;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);
+  font-weight: 700;
+}
+
+/* Input With Leading Icon & Password Visibility Toggle */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-leading-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--transition-fast);
+}
+
+.input-with-icon:focus-within .input-leading-icon {
+  color: var(--accent-gold);
+}
+
+.input-with-icon .form-input {
+  padding-left: 2.75rem;
+  padding-right: 2.85rem;
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 0.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.password-toggle-btn:hover {
+  color: var(--accent-gold);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+/* Inline Auth Error Banner */
+.auth-inline-error {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin-bottom: 1.25rem;
+  animation: errorSlideDown 0.25s ease-out;
+}
+
+.auth-inline-error .error-icon {
+  flex-shrink: 0;
+  color: var(--accent-ruby);
+}
+
+@keyframes errorSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Submit Button */
+.btn-welcome-submit {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  gap: 0.65rem;
+}
+
+.welcome-footer-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 1.6rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.welcome-footer-note svg {
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .welcome-card {
+    padding: 1.75rem 1.25rem;
+  }
+  .welcome-title {
+    font-size: 1.65rem;
+  }
+  .welcome-subtitle {
+    font-size: 0.82rem;
+  }
+}

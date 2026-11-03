@@ -10,105 +10,195 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <a href="#" class="brand" onclick="app.refreshAll(); return false;">
-          <div class="brand-icon">🏛️</div>
-          <div class="brand-text">
-            <h1>PergamonLens</h1>
-            <span class="brand-tagline">Visual Vault & AI Collector</span>
-          </div>
-        </a>
+    <!-- ==================================================================== -->
+    <!-- Pilar 1: Welcome & Sign-In Screen (Visible when state.token == null) -->
+    <!-- ==================================================================== -->
+    <div id="welcomeView" class="welcome-screen">
+      <div class="welcome-backdrop-glow"></div>
+      <div class="welcome-card">
+        <div class="welcome-brand">
+          <div class="welcome-emblem">🏛️</div>
+          <h1 class="welcome-title">PergamonLens</h1>
+          <p class="welcome-subtitle">Bóveda digital para coleccionistas físicos con IA multimodal</p>
+        </div>
 
-        <div class="header-actions">
-          <div id="authStatusContainer">
-            <!-- Renderizado dinámico: botón login o perfil de usuario -->
+        <!-- Selector Táctil de Pastilla (Pill Tabs) -->
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab-btn active" id="tabWelcomeLogin" onclick="app.switchWelcomeTab('login')">
+            Iniciar Sesión
+          </button>
+          <button type="button" class="auth-tab-btn" id="tabWelcomeRegister" onclick="app.switchWelcomeTab('register')">
+            Crear Cuenta
+          </button>
+        </div>
+
+        <!-- Contenedor de Errores Inline Sutil -->
+        <div id="welcomeError" class="auth-inline-error" style="display: none;">
+          <svg class="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span id="welcomeErrorText"></span>
+        </div>
+
+        <!-- Formulario de Autenticación -->
+        <form id="welcomeForm" onsubmit="app.handleWelcomeSubmit(event)" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="welcomeEmail">Correo Electrónico</label>
+            <div class="input-with-icon">
+              <svg class="input-leading-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              <input type="email" id="welcomeEmail" class="form-input" required placeholder="coleccionista@ejemplo.com" autocomplete="email">
+            </div>
           </div>
+
+          <div class="form-group" style="margin-top: 1.15rem;">
+            <label class="form-label" for="welcomePassword">Contraseña</label>
+            <div class="input-with-icon">
+              <svg class="input-leading-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input type="password" id="welcomePassword" class="form-input" required placeholder="••••••••" minlength="6" autocomplete="current-password">
+              <button type="button" class="password-toggle-btn" id="btnTogglePassword" onclick="app.toggleWelcomePasswordVisibility()" title="Mostrar/ocultar contraseña" aria-label="Mostrar u ocultar contraseña">
+                <svg id="iconEyeOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg id="iconEyeClosed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="form-help" id="welcomePasswordHelp" style="display: none;">
+              Mínimo 6 caracteres (mayúsculas, minúsculas, números o símbolos).
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-welcome-submit" id="btnWelcomeSubmit">
+            <span id="btnWelcomeSubmitSpinner" class="spinner" style="display: none; width: 18px; height: 18px; border-width: 2px;"></span>
+            <span id="btnWelcomeSubmitText">Abrir mi Bóveda ➔</span>
+          </button>
+        </form>
+
+        <div class="welcome-footer-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Aislamiento multi-usuario estricto • Bóveda privada</span>
         </div>
       </div>
-    </header>
+    </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Hero & Quick Actions -->
-      <section class="vault-hero">
-        <div class="hero-header">
-          <div class="hero-title">
-            <h2>Bóveda de Colección</h2>
-            <p>Escanear. Identificar. Preservar tus joyas físicas con IA multimodal.</p>
-          </div>
-          <div class="hero-buttons">
-            <button class="btn btn-primary" onclick="app.openScannerModal()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
-                <circle cx="12" cy="13" r="3"></circle>
-              </svg>
-              Escanear con Cámara
-            </button>
-            <button class="btn btn-secondary" onclick="app.openCreateModal()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Alta Manual
-            </button>
+    <!-- ==================================================================== -->
+    <!-- Pilar 2: Bóveda de Colección (Visible con sesión iniciada)          -->
+    <!-- ==================================================================== -->
+    <div id="vaultApp" class="vault-app" style="display: none;">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <a href="#" class="brand" onclick="app.refreshAll(); return false;">
+            <div class="brand-icon">🏛️</div>
+            <div class="brand-text">
+              <h1>PergamonLens</h1>
+              <span class="brand-tagline">Visual Vault & AI Collector</span>
+            </div>
+          </a>
+
+          <div class="header-actions">
+            <div id="authStatusContainer">
+              <!-- Renderizado dinámico: botón login o perfil de usuario -->
+            </div>
           </div>
         </div>
+      </header>
 
-        <!-- Metrics Dashboard -->
-        <div class="stats-grid" id="statsDashboard">
-          <div class="stat-card">
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Lanzamientos</div>
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Hero & Quick Actions -->
+        <section class="vault-hero">
+          <div class="hero-header">
+            <div class="hero-title">
+              <h2>Bóveda de Colección</h2>
+              <p>Escanear. Identificar. Preservar tus joyas físicas con IA multimodal.</p>
+            </div>
+            <div class="hero-buttons">
+              <button class="btn btn-primary" onclick="app.openScannerModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                  <circle cx="12" cy="13" r="3"></circle>
+                </svg>
+                Escanear con Cámara
+              </button>
+              <button class="btn btn-secondary" onclick="app.openCreateModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Alta Manual
+              </button>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statVinyls">0</div>
-            <div class="stat-label">Vinilos</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statCds">0</div>
-            <div class="stat-label">CDs</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statCassettes">0</div>
-            <div class="stat-label">Casetes</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statTracks">0</div>
-            <div class="stat-label">Pistas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statConfirmed">0</div>
-            <div class="stat-label">Confirmados</div>
-          </div>
-        </div>
-      </section>
 
-      <!-- Toolbar & Filters -->
-      <section class="vault-toolbar">
-        <div class="search-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
-        </div>
+          <!-- Metrics Dashboard -->
+          <div class="stats-grid" id="statsDashboard">
+            <div class="stat-card">
+              <div class="stat-value" id="statTotal">0</div>
+              <div class="stat-label">Lanzamientos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statVinyls">0</div>
+              <div class="stat-label">Vinilos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statCds">0</div>
+              <div class="stat-label">CDs</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statCassettes">0</div>
+              <div class="stat-label">Casetes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statTracks">0</div>
+              <div class="stat-label">Pistas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statConfirmed">0</div>
+              <div class="stat-label">Confirmados</div>
+            </div>
+          </div>
+        </section>
 
-        <div class="filter-chips" id="formatFilters">
-          <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
-          <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
-          <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
-          <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
-          <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
-        </div>
-      </section>
+        <!-- Toolbar & Filters -->
+        <section class="vault-toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
+          </div>
 
-      <!-- Releases Grid -->
-      <section id="releasesGrid" class="vault-grid">
-        <!-- Renderizado dinámico de tarjetas -->
-      </section>
-    </main>
+          <div class="filter-chips" id="formatFilters">
+            <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+            <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
+            <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
+            <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
+            <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
+          </div>
+        </section>
+
+        <!-- Releases Grid -->
+        <section id="releasesGrid" class="vault-grid">
+          <!-- Renderizado dinámico de tarjetas -->
+        </section>
+      </main>
+    </div>
 
     <!-- Modals -->
 
@@ -462,4 +552,3 @@
   <script src="js/app.js"></script>
 </body>
 </html>
-
