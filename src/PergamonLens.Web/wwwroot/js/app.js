@@ -191,18 +191,13 @@
     const vaultApp = document.getElementById('vaultApp');
 
     if (welcomeView) {
-      welcomeView.classList.add('fade-out');
-      setTimeout(() => {
-        welcomeView.style.display = 'none';
-        welcomeView.classList.remove('fade-out');
-        if (vaultApp) {
-          vaultApp.style.display = 'flex';
-          vaultApp.classList.add('fade-in');
-          setTimeout(() => vaultApp.classList.remove('fade-in'), 400);
-        }
-      }, 350);
-    } else if (vaultApp) {
+      welcomeView.classList.remove('fade-out');
+      welcomeView.style.display = 'none';
+    }
+    if (vaultApp) {
       vaultApp.style.display = 'flex';
+      vaultApp.classList.add('fade-in');
+      setTimeout(() => vaultApp.classList.remove('fade-in'), 400);
     }
     renderAuthStatus();
   }
@@ -319,10 +314,18 @@
 
       container.innerHTML = `
         <div class="user-profile-badge" title="${escapeHtml(state.userEmail)}">
-          <span class="user-status-dot"></span>
+          <svg class="user-profile-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
           <span class="user-email-text">${escapeHtml(alias)}</span>
-          <button class="btn-logout-pill" onclick="app.logout(true)" title="Cerrar Sesión">
-            Salir
+          <button type="button" class="btn-logout-pill" onclick="app.logout(true)" title="Cerrar Sesión">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Salir</span>
           </button>
         </div>
       `;
@@ -403,7 +406,7 @@
         localStorage.setItem(STORAGE_TOKEN_KEY, state.token);
         localStorage.setItem(STORAGE_EMAIL_KEY, state.userEmail);
 
-        renderAuthStatus();
+        transitionToVault();
         closeAuthModal();
         showToast('Bienvenido a PergamonLens', `Sesión iniciada como ${email}`, 'success');
 
@@ -1227,15 +1230,28 @@
       `;
 
       footer.innerHTML = `
-        <button type="button" class="btn btn-danger btn-sm" style="margin-right: auto;" onclick="app.closeDetailModal(); app.deleteRelease('${release.id}')" title="Eliminar ejemplar de la bóveda">
-          🗑️ Eliminar
+        <button type="button" class="btn-ghost-ruby" onclick="app.closeDetailModal(); app.deleteRelease('${release.id}')" title="Eliminar ejemplar de la bóveda">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Eliminar</span>
         </button>
-        <button type="button" class="btn btn-outline-gold btn-sm" onclick="app.closeDetailModal(); app.openConfirmModal('${release.id}')">
-          🏅 Estado de Conservación
-        </button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="app.closeDetailModal(); app.openEnrichModal('${release.id}')">
-          🔍 Buscar en Catálogo
-        </button>
+        <div class="detail-footer-right">
+          <button type="button" class="btn btn-outline-gold btn-collector-action" onclick="app.closeDetailModal(); app.openConfirmModal('${release.id}')" title="Calificar Estado de Conservación">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>Conservación</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-collector-action" onclick="app.closeDetailModal(); app.openEnrichModal('${release.id}')" title="Buscar y vincular edición en el Catálogo Oficial">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Catálogo</span>
+          </button>
+        </div>
       `;
     } catch (err) {
       body.innerHTML = `<p style="color: var(--accent-ruby);">Error: ${escapeHtml(err.message)}</p>`;
