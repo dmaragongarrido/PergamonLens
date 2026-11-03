@@ -122,11 +122,12 @@ PergamonLens/
   - Resiliencia interactiva con Polly (fast-fail) para respuesta en tiempo real sin bloqueo de interfaz.
   - Auto-deducción inteligente del soporte físico (CD vs Vinilo) y enriquecimiento canónico automático desde Discogs (portada oficial en alta resolución y tracklist).
   - Batería de **160 tests** (140 unitarios + 20 de integración sobre PostgreSQL) al 100% en verde.
-- [ ] **Hito 7: Rediseño UI/UX Premium & Experiencia Móvil**
-  - Rediseño de la interfaz visual con estética de autor y navegación táctil mobile-first.
-  - Arquitectura visual y de interacción extensible y polimórfica (diseñada para música actual y preparada para libros, videojuegos y futuros coleccionables).
-  - Flujo de escaneo e ingesta mágica con transiciones de estado inmersivas.
-  - Graduación de estado y vistas de Bóveda optimizadas para coleccionistas.
+- [x] **Hito 7: Rediseño UI/UX Premium & Experiencia Móvil**
+  - Arquitectura **App Shell Nativa (`100dvh`)** con cabecera fija, barra inferior táctil (*The Thumb Zone*) y scroll confinado exclusivamente al lienzo de portadas.
+  - Pantalla de Bienvenida & Auth Flow inmersiva (`#welcomeView`) con *Pill Tabs*, toggle de visibilidad de contraseña y transiciones síncronas.
+  - Tarjetas físicas ***Crate Digging* 100% visuales** con vinilo surcado o disco óptico CD iridiscente asomando de la funda.
+  - Escáner **1-Tap Lens** de fricción cero (sin registros huérfanos en PostgreSQL cuando una imagen no es reconocida) y graduación de **Estado de Conservación en 1 toque**.
+  - Ficha de Detalle en *Bottom Sheet* con **contraportada oficial de Discogs proyectada en el fondo** y buscador visual de ediciones en el catálogo oficial.
 - [ ] **Hito 8: CI/CD, Despliegue & Producción**
   - Dockerización final multi-stage y optimización del pipeline de GitHub Actions.
   - Configuración de variables de entorno, secrets y publicación en producción.
