@@ -463,6 +463,8 @@
     document.getElementById('statCassettes').textContent = stats ? (stats.formatBreakdown?.Cassette || 0) : '0';
     document.getElementById('statTracks').textContent = stats ? (stats.totalTracks || 0) : '0';
     document.getElementById('statConfirmed').textContent = stats ? (stats.confirmedReleases || 0) : '0';
+    const musicCountEl = document.getElementById('categoryMusicCount');
+    if (musicCountEl) musicCountEl.textContent = stats ? (stats.totalReleases || 0) : '0';
   }
 
   async function loadReleases() {
@@ -632,6 +634,87 @@
   // ============================================================================
   // Filtros & Búsqueda
   // ============================================================================
+  function setCategory(category) {
+    state.currentCategory = category;
+    const tabs = document.querySelectorAll('#categoryTabs .category-tab-btn');
+    tabs.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.category === category);
+    });
+
+    const toolbar = document.getElementById('vaultToolbar');
+    const grid = document.getElementById('releasesGrid');
+    const comingSoon = document.getElementById('categoryComingSoonView');
+
+    if (category === 'music') {
+      if (toolbar) toolbar.style.display = '';
+      if (grid) grid.style.display = '';
+      if (comingSoon) comingSoon.style.display = 'none';
+      return;
+    }
+
+    if (toolbar) toolbar.style.display = 'none';
+    if (grid) grid.style.display = 'none';
+    if (comingSoon) {
+      comingSoon.style.display = 'block';
+      const iconEl = document.getElementById('comingSoonIcon');
+      const badgeEl = document.getElementById('comingSoonBadge');
+      const titleEl = document.getElementById('comingSoonTitle');
+      const descEl = document.getElementById('comingSoonDescription');
+
+      if (category === 'books') {
+        if (iconEl) iconEl.textContent = '📚';
+        if (badgeEl) badgeEl.textContent = 'Motor ISBN Bookland Listo';
+        if (titleEl) titleEl.textContent = 'Bóveda Bibliográfica & Primeras Ediciones';
+        if (descEl) {
+          descEl.textContent = 'El decodificador local ZXing.Net ya detecta prefijos internacionales Bookland (978 y 979). En la siguiente expansión polimórfica podrás catalogar libros en tapa dura, bolsillo y novela gráfica con metadatos editoriales completos.';
+        }
+      } else if (category === 'games') {
+        if (iconEl) iconEl.textContent = '🎮';
+        if (badgeEl) badgeEl.textContent = 'Arquitectura Polimórfica';
+        if (titleEl) titleEl.textContent = 'Bóveda de Videojuegos Físicos & Retro';
+        if (descEl) {
+          descEl.textContent = 'Diseñado para coleccionistas de ediciones físicas de consola y PC (cajas, cartuchos, manuales y ediciones coleccionista). Próximamente con graduación independiente de caja, manual y soporte óptico/cartucho.';
+        }
+      }
+    }
+  }
+
+  function switchMobileNav(section) {
+    const navItems = {
+      vault: document.getElementById('navBtnVault'),
+      search: document.getElementById('navBtnSearch'),
+      stats: document.getElementById('navBtnStats')
+    };
+
+    Object.entries(navItems).forEach(([key, el]) => {
+      if (el) el.classList.toggle('active', key === section);
+    });
+
+    if (section === 'vault') {
+      setCategory('music');
+      const catBar = document.getElementById('categoryTabs');
+      if (catBar) catBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'search') {
+      setCategory('music');
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          searchInput.focus();
+          searchInput.classList.add('pulse-highlight');
+          setTimeout(() => searchInput.classList.remove('pulse-highlight'), 1000);
+        }, 300);
+      }
+    } else if (section === 'stats') {
+      const statsEl = document.getElementById('statsDashboard');
+      if (statsEl) {
+        statsEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        statsEl.classList.add('pulse-highlight');
+        setTimeout(() => statsEl.classList.remove('pulse-highlight'), 1000);
+      }
+    }
+  }
+
   function setFormatFilter(format) {
     state.currentFilter = format;
     const chips = document.querySelectorAll('#formatFilters .chip-btn');
@@ -1224,6 +1307,8 @@
     switchAuthTab,
     handleAuthSubmit,
     logout,
+    setCategory,
+    switchMobileNav,
     setFormatFilter,
     handleSearchInput,
     openScannerModal,
