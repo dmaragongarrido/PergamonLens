@@ -545,6 +545,21 @@
     grid.innerHTML = releases.map(release => createReleaseCardHtml(release)).join('');
   }
 
+  function getGoldmineShortCode(condition) {
+    if (!condition) return null;
+    const map = {
+      Mint: 'M',
+      NearMint: 'NM',
+      VeryGoodPlus: 'VG+',
+      VeryGood: 'VG',
+      GoodPlus: 'G+',
+      Good: 'G',
+      Fair: 'F',
+      Poor: 'P'
+    };
+    return map[condition] || condition;
+  }
+
   function createReleaseCardHtml(r) {
     const formatClass = (r.format || 'Vinyl').toLowerCase();
     const statusClass = (r.status || 'PendingAnalysis').toLowerCase();
@@ -554,9 +569,10 @@
       ? `<img src="${escapeHtml(r.coverImageUrl)}" alt="${escapeHtml(r.title)}" class="cover-image" loading="lazy" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML=app.getPlaceholderGroovesHtml('${escapeHtml(r.format)}');">`
       : getPlaceholderGroovesHtml(r.format);
 
-    // Pill de condición Goldmine si está disponible
-    const conditionHtml = r.mediaCondition
-      ? `<div class="condition-pill" title="Condición Goldmine">🏅 ${escapeHtml(r.mediaCondition)}</div>`
+    // Código corto Goldmine sobre portada
+    const shortCondition = getGoldmineShortCode(r.mediaCondition);
+    const conditionOverlayHtml = shortCondition
+      ? `<span class="goldmine-corner-badge" title="Condición Goldmine: ${escapeHtml(r.mediaCondition)}">🏅 ${escapeHtml(shortCondition)}</span>`
       : '';
 
     // Estado amigable
@@ -566,52 +582,72 @@
     else if (r.status === 'Enriched') statusLabel = 'Enriquecido';
     else if (r.status === 'Confirmed') statusLabel = 'Confirmado';
 
-    const yearLabel = r.releaseYear ? `${r.releaseYear}` : 'Año desc.';
+    const yearLabel = r.releaseYear ? `${r.releaseYear}` : 'S/F';
     const tracksCount = r.tracks ? r.tracks.length : 0;
 
+    // Artefacto físico asomando según el soporte (Vinilo vs CD)
+    let physicalArtifactHtml = '';
+    if (formatClass === 'vinyl') {
+      physicalArtifactHtml = `
+        <div class="vinyl-disc-peek" aria-hidden="true">
+          <div class="vinyl-disc-grooves">
+            <div class="vinyl-disc-label"></div>
+          </div>
+        </div>
+      `;
+    } else if (formatClass === 'cd') {
+      physicalArtifactHtml = `
+        <div class="cd-disc-peek" aria-hidden="true">
+          <div class="cd-disc-hole"></div>
+        </div>
+      `;
+    }
+
     return `
-      <article class="release-card" data-id="${r.id}">
-        <div class="card-cover-wrapper" onclick="app.openDetailModal('${r.id}')" style="cursor: pointer;">
-          ${coverHtml}
-          <div class="card-badges-top">
-            <span class="format-badge ${formatClass}">${escapeHtml(r.format)}</span>
-            <span class="status-badge ${statusClass}">
-              <span class="status-dot"></span>
-              ${escapeHtml(statusLabel)}
-            </span>
+      <article class="release-card crate-card format-${formatClass}" data-id="${r.id}" onclick="app.openDetailModal('${r.id}')">
+        <div class="crate-media-stage">
+          ${physicalArtifactHtml}
+          <div class="card-cover-wrapper">
+            ${formatClass === 'cd' ? '<div class="cd-spine-ribs" aria-hidden="true"></div><div class="cd-glare" aria-hidden="true"></div>' : '<div class="sleeve-spine" aria-hidden="true"></div>'}
+            ${coverHtml}
+            <div class="card-badges-top">
+              <span class="format-badge ${formatClass}">${escapeHtml(r.format)}</span>
+              <span class="status-badge ${statusClass}">
+                <span class="status-dot"></span>
+                ${escapeHtml(statusLabel)}
+              </span>
+            </div>
+            ${conditionOverlayHtml}
           </div>
         </div>
 
         <div class="card-body">
-          <h4 class="card-title" title="${escapeHtml(r.title)}">${escapeHtml(r.title)}</h4>
           <div class="card-artist" title="${escapeHtml(r.artist)}">${escapeHtml(r.artist)}</div>
+          <h4 class="card-title" title="${escapeHtml(r.title)}">${escapeHtml(r.title)}</h4>
 
           <div class="card-meta-row">
-            <span>${yearLabel}</span>
+            <span class="meta-year">${yearLabel}</span>
             <span class="card-meta-dot">•</span>
-            <span>${escapeHtml(r.label || 'Sello no esp.')}</span>
-            <span class="card-meta-dot">•</span>
-            <span>${tracksCount} pistas</span>
+            <span class="meta-label" title="${escapeHtml(r.label || 'Sello no esp.')}">${escapeHtml(r.label || 'Sello no esp.')}</span>
           </div>
 
-          ${conditionHtml ? `<div style="margin-bottom: 0.75rem;">${conditionHtml}</div>` : ''}
+          <div class="card-footer-bar" onclick="event.stopPropagation()">
+            <span class="tracks-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+              ${tracksCount} ${tracksCount === 1 ? 'pista' : 'pistas'}
+            </span>
 
-          <div class="card-actions">
-            <button class="card-btn" onclick="app.openDetailModal('${r.id}')" title="Ver Ficha y Pistas">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-              Ver
-            </button>
-            <button class="card-btn" onclick="app.openConfirmModal('${r.id}')" title="Graduación Goldmine">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-              Calificar
-            </button>
-            <button class="card-btn" onclick="app.openEnrichModal('${r.id}')" title="Enriquecer con Discogs">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-              Discogs
-            </button>
-            <button class="card-btn card-btn-danger" onclick="app.deleteRelease('${r.id}')" title="Eliminar de la Colección" style="flex: 0 0 34px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
+            <div class="card-quick-actions">
+              <button type="button" class="card-icon-btn" onclick="app.openConfirmModal('${r.id}')" title="Graduar condición Goldmine">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </button>
+              <button type="button" class="card-icon-btn" onclick="app.openEnrichModal('${r.id}')" title="Vincular / Enriquecer con Discogs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              </button>
+              <button type="button" class="card-icon-btn card-icon-btn-danger" onclick="app.deleteRelease('${r.id}')" title="Eliminar de la Bóveda">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
           </div>
         </div>
       </article>
