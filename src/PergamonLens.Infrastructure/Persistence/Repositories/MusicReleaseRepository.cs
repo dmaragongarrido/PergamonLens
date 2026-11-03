@@ -86,7 +86,11 @@ public sealed class MusicReleaseRepository : IMusicReleaseRepository
 
     public async Task UpdateAsync(MusicRelease release, CancellationToken cancellationToken = default)
     {
-        _context.MusicReleases.Update(release);
+        if (_context.Entry(release).State == EntityState.Detached)
+        {
+            _context.MusicReleases.Update(release);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
     }
 
