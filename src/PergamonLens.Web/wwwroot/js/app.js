@@ -915,6 +915,15 @@
     if (mobileInput) mobileInput.value = '';
   }
 
+  function selectScanFormat(format) {
+    const input = document.getElementById('scanFormatSelect');
+    if (input) input.value = format;
+    const pills = document.querySelectorAll('#scanFormatPills .scan-pill');
+    pills.forEach(pill => {
+      pill.classList.toggle('active', pill.dataset.format === format);
+    });
+  }
+
   async function submitScan() {
     if (!state.selectedScanBlob) {
       showToast('Imagen requerida', 'Captura una foto con la cámara o selecciona un archivo.', 'error');
@@ -924,9 +933,23 @@
     const format = document.getElementById('scanFormatSelect').value;
     const btnSubmit = document.getElementById('btnSubmitScan');
     const btnSubmitText = document.getElementById('btnSubmitScanText');
+    const aiOverlay = document.getElementById('scanAiOverlay');
+    const aiTitle = document.getElementById('scanAiPhaseTitle');
+    const aiSubtitle = document.getElementById('scanAiPhaseSubtitle');
 
     btnSubmit.disabled = true;
-    btnSubmitText.innerHTML = '<span class="spinner" style="display:inline-block; vertical-align:middle; margin-right:0.4rem;"></span> Ingestando con IA...';
+    btnSubmitText.innerHTML = '<span class="spinner" style="display:inline-block; vertical-align:middle; margin-right:0.4rem;"></span> Analizando...';
+
+    if (aiOverlay) {
+      aiOverlay.style.display = 'flex';
+      if (aiTitle) aiTitle.textContent = 'Analizando Soporte Físico...';
+      if (aiSubtitle) aiSubtitle.textContent = 'Fase 1: Buscando código EAN/UPC con ZXing.Net (~2 ms)...';
+    }
+
+    const phaseTimer = setTimeout(() => {
+      if (aiTitle) aiTitle.textContent = 'Inferencia Visual Multimodal';
+      if (aiSubtitle) aiSubtitle.textContent = 'Fase 2: Identificando portada con Gemini Flash & Discogs...';
+    }, 450);
 
     const formData = new FormData();
     formData.append('file', state.selectedScanBlob, state.selectedScanFileName || 'scan.jpg');
@@ -943,15 +966,17 @@
       closeScannerModal();
       await refreshAll();
 
-      // Abrir automáticamente la ficha o modal de calificación Goldmine
+      // Abrir automáticamente el Bottom Sheet de graduación Goldmine en 1-toque
       if (result.id) {
         openConfirmModal(result.id);
       }
     } catch (err) {
       showToast('Fallo en Análisis de Imagen', err.message, 'error');
     } finally {
+      clearTimeout(phaseTimer);
+      if (aiOverlay) aiOverlay.style.display = 'none';
       btnSubmit.disabled = false;
-      btnSubmitText.textContent = 'Analizar con IA Multimodal';
+      btnSubmitText.textContent = 'Identificar con IA ➔';
     }
   }
 
@@ -1132,14 +1157,59 @@
   // ============================================================================
   // Graduación Goldmine & Confirmación
   // ============================================================================
+  const GOLDMINE_DESCRIPTIONS = {
+    media: {
+      Mint: 'Mint (M) — Impecable, nuevo a estrenar',
+      NearMint: 'Near Mint (NM) — Casi perfecto, sin marcas',
+      VeryGoodPlus: 'Very Good Plus (VG+) — Excelente, marcas leves',
+      VeryGood: 'Very Good (VG) — Buen estado, ruido superficial leve',
+      GoodPlus: 'Good Plus (G+) — Marcas evidentes, desgaste apreciable',
+      Good: 'Good (G) — Desgaste pronunciado, no salta',
+      Fair: 'Fair (F) — Daños visibles severos',
+      Poor: 'Poor (P) — Injugable o roto'
+    },
+    sleeve: {
+      Mint: 'Mint (M) — Impecable, precintada',
+      NearMint: 'Near Mint (NM) — Sin esquinas dobladas ni roces',
+      VeryGoodPlus: 'Very Good Plus (VG+) — Desgaste mínimo en lomo',
+      VeryGood: 'Very Good (VG) — Ringwear moderado',
+      GoodPlus: 'Good Plus (G+) — Rozaduras notables en bordes',
+      Good: 'Good (G) — Roturas en bordes o marcas de cinta',
+      Fair: 'Fair (F) — Muy deteriorada o manchada',
+      Poor: 'Poor (P) — Incompleta o destruida'
+    }
+  };
+
+  function selectGoldmineGrade(target, grade) {
+    const isMedia = target === 'media';
+    const inputId = isMedia ? 'confirmMediaCondition' : 'confirmSleeveCondition';
+    const gridId = isMedia ? 'mediaGradeGrid' : 'sleeveGradeGrid';
+    const descId = isMedia ? 'mediaConditionDesc' : 'sleeveConditionDesc';
+
+    const inputEl = document.getElementById(inputId);
+    if (inputEl) inputEl.value = grade;
+
+    const chips = document.querySelectorAll(`#${gridId} .goldmine-chip`);
+    chips.forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.grade === grade);
+    });
+
+    const descEl = document.getElementById(descId);
+    if (descEl && GOLDMINE_DESCRIPTIONS[target] && GOLDMINE_DESCRIPTIONS[target][grade]) {
+      descEl.textContent = GOLDMINE_DESCRIPTIONS[target][grade];
+    }
+  }
+
   function openConfirmModal(releaseId) {
     document.getElementById('confirmReleaseId').value = releaseId;
     const release = state.releases.find(r => r.id === releaseId);
-    if (release) {
-      if (release.mediaCondition) document.getElementById('confirmMediaCondition').value = release.mediaCondition;
-      if (release.sleeveCondition) document.getElementById('confirmSleeveCondition').value = release.sleeveCondition;
-      if (release.notes) document.getElementById('confirmNotes').value = release.notes;
-    }
+    const mediaGrade = (release && release.mediaCondition) ? release.mediaCondition : 'NearMint';
+    const sleeveGrade = (release && release.sleeveCondition) ? release.sleeveCondition : 'NearMint';
+
+    selectGoldmineGrade('media', mediaGrade);
+    selectGoldmineGrade('sleeve', sleeveGrade);
+    document.getElementById('confirmNotes').value = (release && release.notes) ? release.notes : '';
+
     const modal = document.getElementById('confirmModal');
     if (modal) modal.classList.add('active');
   }
@@ -1354,7 +1424,9 @@
     captureFromCamera,
     handleFileSelect,
     resetScanPreview,
+    selectScanFormat,
     submitScan,
+    selectGoldmineGrade,
     openCreateModal,
     closeCreateModal,
     toggleFormatFields,

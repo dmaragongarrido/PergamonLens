@@ -270,35 +270,40 @@
 
     <!-- Modals -->
 
-    <!-- Scanner Modal -->
-    <div class="modal-overlay" id="scannerModal">
-      <div class="modal-dialog">
+    <!-- Scanner Modal (Immersive Bottom Sheet - Subfase 7.4) -->
+    <div class="modal-overlay bottom-sheet-overlay" id="scannerModal">
+      <div class="modal-dialog bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeScannerModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
+        </div>
         <div class="modal-header">
           <h3>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
               <circle cx="12" cy="13" r="3"></circle>
             </svg>
-            Escanear Álbum Físico
+            Escáner Inteligente de Soportes
           </h3>
           <button class="modal-close-btn" onclick="app.closeScannerModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="position: relative;">
+          <!-- Selector Rápido de Soporte en 1 Toque -->
           <div class="form-group">
-            <label class="form-label">Formato Esperado</label>
-            <select id="scanFormatSelect" class="form-select">
-              <option value="Auto" selected>Auto (Detección Automática: CD, Vinilo, Casete)</option>
-              <option value="Vinyl">Vinilo (LP, Maxi, Single)</option>
-              <option value="CD">Compact Disc (CD)</option>
-              <option value="Cassette">Casete de Audio</option>
-              <option value="BoxSet">Box Set Recopilatorio</option>
-            </select>
+            <label class="form-label">Soporte Físico (1-Toque)</label>
+            <input type="hidden" id="scanFormatSelect" value="Auto">
+            <div class="scan-format-pills" id="scanFormatPills">
+              <button type="button" class="scan-pill active" data-format="Auto" onclick="app.selectScanFormat('Auto')">✨ Auto (IA)</button>
+              <button type="button" class="scan-pill" data-format="Vinyl" onclick="app.selectScanFormat('Vinyl')">💿 Vinilo</button>
+              <button type="button" class="scan-pill" data-format="CD" onclick="app.selectScanFormat('CD')">📀 CD</button>
+              <button type="button" class="scan-pill" data-format="Cassette" onclick="app.selectScanFormat('Cassette')">📼 Casete</button>
+              <button type="button" class="scan-pill" data-format="BoxSet" onclick="app.selectScanFormat('BoxSet')">📦 Box Set</button>
+            </div>
           </div>
 
           <!-- Pestañas de modo de escaneo: Cámara en Vivo o Archivo -->
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.35rem;">
             <button class="chip-btn active" id="tabLiveCamera" onclick="app.switchScannerTab('camera')">Cámara en Vivo</button>
             <button class="chip-btn" id="tabUploadFile" onclick="app.switchScannerTab('upload')">Subir Fotografía</button>
           </div>
@@ -309,20 +314,22 @@
               <video id="cameraVideo" autoplay playsinline muted></video>
               <canvas id="cameraCanvas"></canvas>
               <div class="scanner-overlay">
-                <div class="scanner-target-box"></div>
+                <div class="scanner-target-box">
+                  <div class="scanner-laser-line"></div>
+                </div>
               </div>
             </div>
             <div class="scanner-controls">
               <button class="btn btn-secondary btn-sm" onclick="app.toggleCameraFacing()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                Girar Cámara
+                Girar Lente
               </button>
               <button class="camera-shutter-btn" id="shutterBtn" onclick="app.captureFromCamera()" title="Capturar Fotografía">
                 <div class="camera-shutter-inner"></div>
               </button>
               <label class="btn btn-secondary btn-sm" for="mobileDirectCameraInput">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                Móvil Nativo
+                Cámara Nativa
               </label>
               <!-- Input nativo de cámara para móviles -->
               <input type="file" id="mobileDirectCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="app.handleFileSelect(event)">
@@ -337,26 +344,38 @@
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
-              <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Arrastra una foto o haz clic para seleccionarla</div>
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">Portada, lomo o código de barras (JPG, PNG, WebP)</div>
+              <div style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Arrastra una foto o toca para elegir de tu galería</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">Portada frontal, contraportada o código de barras (JPG, PNG, WebP)</div>
             </div>
             <input type="file" id="fileUploadInput" accept="image/*" style="display:none;" onchange="app.handleFileSelect(event)">
           </div>
 
           <!-- Previsualización de escaneo -->
-          <div id="scanPreviewContainer" style="display: none; align-items: center; gap: 1rem; background: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-md);">
-            <img id="scanPreviewImg" src="" alt="Previsualización" style="width: 70px; height: 70px; object-fit: cover; border-radius: var(--radius-sm);">
+          <div id="scanPreviewContainer" style="display: none; align-items: center; gap: 1rem; background: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid rgba(245, 158, 11, 0.35);">
+            <img id="scanPreviewImg" src="" alt="Previsualización" style="width: 68px; height: 68px; object-fit: cover; border-radius: var(--radius-sm);">
             <div style="flex: 1;">
               <div style="font-size: 0.85rem; font-weight: 600; color: #fff;" id="scanPreviewName">Foto capturada</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary);" id="scanPreviewSize">Listo para análisis con IA</div>
+              <div style="font-size: 0.75rem; color: var(--accent-gold);" id="scanPreviewSize">Lista para identificación híbrida</div>
             </div>
-            <button class="btn btn-sm btn-secondary" onclick="app.resetScanPreview()">Cambiar</button>
+            <button class="btn btn-sm btn-secondary" onclick="app.resetScanPreview()">Repetir</button>
+          </div>
+
+          <!-- Overlay Dinámico de Reconocimiento IA (Subfase 7.4) -->
+          <div id="scanAiOverlay" class="scan-ai-overlay" style="display: none;">
+            <div class="scan-ai-pulse-ring">
+              <span class="scan-ai-icon">🏛️</span>
+            </div>
+            <h4 id="scanAiPhaseTitle">Analizando Soporte Físico...</h4>
+            <p id="scanAiPhaseSubtitle">Fase 1: Buscando código EAN/UPC con ZXing.Net (~2 ms)...</p>
+            <div class="scan-ai-progress-bar">
+              <div class="scan-ai-progress-fill"></div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="app.closeScannerModal()">Cancelar</button>
           <button class="btn btn-primary" id="btnSubmitScan" onclick="app.submitScan()" disabled>
-            <span id="btnSubmitScanText">Analizar con IA Multimodal</span>
+            <span id="btnSubmitScanText">Identificar con IA ➔</span>
           </button>
         </div>
       </div>
@@ -464,9 +483,12 @@
       </div>
     </div>
 
-    <!-- Detail & Tracks Modal -->
-    <div class="modal-overlay" id="detailModal">
-      <div class="modal-dialog modal-lg">
+    <!-- Detail & Tracks Bottom Sheet (Subfase 7.4) -->
+    <div class="modal-overlay bottom-sheet-overlay" id="detailModal">
+      <div class="modal-dialog modal-lg bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeDetailModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
+        </div>
         <div class="modal-header">
           <h3 id="detailHeaderTitle">Detalle del Lanzamiento</h3>
           <button class="modal-close-btn" onclick="app.closeDetailModal()">
@@ -482,60 +504,70 @@
       </div>
     </div>
 
-    <!-- Confirm / Goldmine Grading Modal -->
-    <div class="modal-overlay" id="confirmModal">
-      <div class="modal-dialog">
+    <!-- Confirm / 1-Touch Goldmine Grading Bottom Sheet (Subfase 7.4) -->
+    <div class="modal-overlay bottom-sheet-overlay" id="confirmModal">
+      <div class="modal-dialog bottom-sheet-dialog">
+        <div class="bottom-sheet-handle" onclick="app.closeConfirmModal()" title="Deslizar o pulsar para cerrar">
+          <span></span>
+        </div>
         <div class="modal-header">
           <h3>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            Graduación Goldmine & Confirmación
+            Graduación Goldmine en 1-Toque
           </h3>
           <button class="modal-close-btn" onclick="app.closeConfirmModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.85rem; color: var(--text-secondary);">
-            Califica el estado físico de conservación según el estándar oficial internacional <strong>Goldmine</strong>.
-          </p>
           <input type="hidden" id="confirmReleaseId">
+          <input type="hidden" id="confirmMediaCondition" value="NearMint">
+          <input type="hidden" id="confirmSleeveCondition" value="NearMint">
 
+          <!-- Selector Táctil 1-Toque: Soporte Físico (Media Condition) -->
           <div class="form-group">
-            <label class="form-label">Estado del Soporte Físico (Media Condition)</label>
-            <select id="confirmMediaCondition" class="form-select">
-              <option value="Mint">Mint (M) — Impecable, nuevo a estrenar</option>
-              <option value="NearMint" selected>Near Mint (NM) — Casi perfecto, sin marcas</option>
-              <option value="VeryGoodPlus">Very Good Plus (VG+) — Excelente, marcas leves de uso</option>
-              <option value="VeryGood">Very Good (VG) — Buen estado, ruido superficial leve</option>
-              <option value="GoodPlus">Good Plus (G+) — Marcas evidentes, desgaste apreciable</option>
-              <option value="Good">Good (G) — Desgaste pronunciado, no salta</option>
-              <option value="Fair">Fair (F) — Daños visibles severos</option>
-              <option value="Poor">Poor (P) — Injugable o roto</option>
-            </select>
+            <div class="goldmine-header-row">
+              <label class="form-label">Estado del Disco / Soporte (Media)</label>
+              <span class="goldmine-live-desc" id="mediaConditionDesc">Near Mint (NM) — Casi perfecto, sin marcas</span>
+            </div>
+            <div class="goldmine-touch-grid" id="mediaGradeGrid">
+              <button type="button" class="goldmine-chip" data-grade="Mint" onclick="app.selectGoldmineGrade('media', 'Mint')">M</button>
+              <button type="button" class="goldmine-chip active" data-grade="NearMint" onclick="app.selectGoldmineGrade('media', 'NearMint')">NM</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGoodPlus" onclick="app.selectGoldmineGrade('media', 'VeryGoodPlus')">VG+</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGood" onclick="app.selectGoldmineGrade('media', 'VeryGood')">VG</button>
+              <button type="button" class="goldmine-chip" data-grade="GoodPlus" onclick="app.selectGoldmineGrade('media', 'GoodPlus')">G+</button>
+              <button type="button" class="goldmine-chip" data-grade="Good" onclick="app.selectGoldmineGrade('media', 'Good')">G</button>
+              <button type="button" class="goldmine-chip" data-grade="Fair" onclick="app.selectGoldmineGrade('media', 'Fair')">F</button>
+              <button type="button" class="goldmine-chip" data-grade="Poor" onclick="app.selectGoldmineGrade('media', 'Poor')">P</button>
+            </div>
           </div>
 
-          <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label">Estado de la Portada / Funda (Sleeve Condition)</label>
-            <select id="confirmSleeveCondition" class="form-select">
-              <option value="Mint">Mint (M) — Impecable, precintada</option>
-              <option value="NearMint" selected>Near Mint (NM) — Sin esquinas dobladas ni roces</option>
-              <option value="VeryGoodPlus">Very Good Plus (VG+) — Desgaste mínimo en esquinas o lomo</option>
-              <option value="VeryGood">Very Good (VG) — Ringwear moderado o pequeñas hendiduras</option>
-              <option value="GoodPlus">Good Plus (G+) — Rozaduras notables o esquinas rotas</option>
-              <option value="Good">Good (G) — Roturas en bordes o marcas de cinta</option>
-              <option value="Fair">Fair (F) — Muy deteriorada o manchada</option>
-              <option value="Poor">Poor (P) — Incompleta o destruida</option>
-            </select>
+          <!-- Selector Táctil 1-Toque: Portada / Funda (Sleeve Condition) -->
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <div class="goldmine-header-row">
+              <label class="form-label">Estado de Portada / Estuche (Sleeve)</label>
+              <span class="goldmine-live-desc" id="sleeveConditionDesc">Near Mint (NM) — Sin esquinas dobladas ni roces</span>
+            </div>
+            <div class="goldmine-touch-grid" id="sleeveGradeGrid">
+              <button type="button" class="goldmine-chip" data-grade="Mint" onclick="app.selectGoldmineGrade('sleeve', 'Mint')">M</button>
+              <button type="button" class="goldmine-chip active" data-grade="NearMint" onclick="app.selectGoldmineGrade('sleeve', 'NearMint')">NM</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGoodPlus" onclick="app.selectGoldmineGrade('sleeve', 'VeryGoodPlus')">VG+</button>
+              <button type="button" class="goldmine-chip" data-grade="VeryGood" onclick="app.selectGoldmineGrade('sleeve', 'VeryGood')">VG</button>
+              <button type="button" class="goldmine-chip" data-grade="GoodPlus" onclick="app.selectGoldmineGrade('sleeve', 'GoodPlus')">G+</button>
+              <button type="button" class="goldmine-chip" data-grade="Good" onclick="app.selectGoldmineGrade('sleeve', 'Good')">G</button>
+              <button type="button" class="goldmine-chip" data-grade="Fair" onclick="app.selectGoldmineGrade('sleeve', 'Fair')">F</button>
+              <button type="button" class="goldmine-chip" data-grade="Poor" onclick="app.selectGoldmineGrade('sleeve', 'Poor')">P</button>
+            </div>
           </div>
 
-          <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label">Notas de Custodia y Calificación</label>
-            <textarea id="confirmNotes" class="form-textarea" placeholder="Ej. Prensaje japonés original de 1978 con OBI strip intacto y folleto lírico..."></textarea>
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label class="form-label">Notas de Custodia y Edición (Opcional)</label>
+            <textarea id="confirmNotes" class="form-textarea" style="min-height: 64px;" placeholder="Ej. Prensaje japonés original con OBI strip intacto..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="app.closeConfirmModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="app.submitConfirm()">Confirmar en Bóveda</button>
+          <button class="btn btn-primary" onclick="app.submitConfirm()">Preservar en Bóveda ➔</button>
         </div>
       </div>
     </div>
