@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -60,17 +60,22 @@ public sealed class MusicReleaseRepository : IMusicReleaseRepository
 
         string normalized = query.Trim();
 
-        return await _context.MusicReleases
+        var userReleases = await _context.MusicReleases
             .Include(r => r.Tracks)
+            .ToListAsync(cancellationToken);
+
+        return userReleases
             .Where(r =>
-                r.Title.Contains(normalized) ||
-                r.Artist.Contains(normalized) ||
-                (r.Label != null && r.Label.Contains(normalized)) ||
-                (r.Barcode != null && ((string)r.Barcode).Contains(normalized)) ||
-                (r.CatalogueNumber != null && ((string)r.CatalogueNumber).Contains(normalized)))
+                r.Title.Contains(normalized, StringComparison.OrdinalIgnoreCase) ||
+                r.Artist.Contains(normalized, StringComparison.OrdinalIgnoreCase) ||
+                (r.Label != null && r.Label.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
+                (r.Country != null && r.Country.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
+                (r.Barcode != null && r.Barcode.Value.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
+                (r.CatalogueNumber != null && r.CatalogueNumber.Value.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
+                (r.ReleaseYear != null && r.ReleaseYear.Value.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)))
             .OrderBy(r => r.Artist)
             .ThenBy(r => r.Title)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 
     public async Task AddAsync(MusicRelease release, CancellationToken cancellationToken = default)
