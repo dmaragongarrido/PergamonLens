@@ -707,31 +707,29 @@
 
     const catalogView = document.getElementById('vaultCatalogView');
     const metricsView = document.getElementById('vaultMetricsView');
+    const scrollStage = document.getElementById('vaultScrollStage');
 
     if (section === 'stats') {
       if (catalogView) catalogView.style.display = 'none';
       if (metricsView) {
         metricsView.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        metricsView.scrollTo({ top: 0, behavior: 'smooth' });
       }
       return;
     }
 
-    // Mostrar vista de Catálogo (Bóveda o Buscar)
+    // Mostrar vista de Catálogo (Bóveda o Buscar) en modo App Shell flex
     if (metricsView) metricsView.style.display = 'none';
-    if (catalogView) catalogView.style.display = 'block';
+    if (catalogView) catalogView.style.display = 'flex';
 
     if (section === 'vault') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (scrollStage) scrollStage.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (section === 'search') {
       const searchInput = document.getElementById('searchInput');
       if (searchInput) {
-        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => {
-          searchInput.focus();
-          searchInput.classList.add('pulse-highlight');
-          setTimeout(() => searchInput.classList.remove('pulse-highlight'), 1000);
-        }, 250);
+        searchInput.focus();
+        searchInput.classList.add('pulse-highlight');
+        setTimeout(() => searchInput.classList.remove('pulse-highlight'), 1000);
       }
     }
   }

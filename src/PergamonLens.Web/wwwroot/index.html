@@ -115,69 +115,74 @@
         <!-- ================================================================ -->
         <!-- VISTA 1: Catálogo Visual de la Bóveda (#vaultCatalogView)        -->
         <!-- ================================================================ -->
-        <div id="vaultCatalogView">
-          <!-- Cabecera Unificada: Selector Polimórfico + Buscador Omnipresente -->
-          <section class="vault-top-bar" id="vaultToolbar" aria-label="Categorías y Búsqueda">
-            <div class="category-tabs" id="categoryTabs">
-              <button type="button" class="category-tab-btn active" data-category="music" onclick="app.setCategory('music')">
-                <span class="category-tab-icon">🎵</span>
-                <span class="category-tab-label">Música</span>
-                <span class="category-tab-count" id="categoryMusicCount">0</span>
-              </button>
-              <button type="button" class="category-tab-btn" data-category="books" onclick="app.setCategory('books')">
-                <span class="category-tab-icon">📚</span>
-                <span class="category-tab-label">Libros</span>
-                <span class="category-badge-soon">ISBN</span>
-              </button>
-              <button type="button" class="category-tab-btn" data-category="games" onclick="app.setCategory('games')">
-                <span class="category-tab-icon">🎮</span>
-                <span class="category-tab-label">Videojuegos</span>
-                <span class="category-badge-soon">CIB</span>
-              </button>
-            </div>
-
-            <div class="search-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
-            </div>
-          </section>
-
-          <!-- Filtros de Formato Físico (Música) -->
-          <div class="filter-chips" id="formatFilters">
-            <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
-            <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
-            <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
-            <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
-            <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
-          </div>
-
-          <!-- Releases Grid (Crate Digging Visual Cards) -->
-          <section id="releasesGrid" class="vault-grid">
-            <!-- Renderizado dinámico de tarjetas 100% visuales -->
-          </section>
-
-          <!-- Polymorphic Category Coming Soon View (Books / Video Games) -->
-          <section id="categoryComingSoonView" class="polymorphic-coming-soon" style="display: none;">
-            <div class="coming-soon-card">
-              <div class="coming-soon-icon" id="comingSoonIcon">📚</div>
-              <div class="coming-soon-badge" id="comingSoonBadge">Arquitectura Polimórfica Preparada</div>
-              <h3 id="comingSoonTitle">Bóveda Bibliográfica &amp; Bookland ISBN</h3>
-              <p id="comingSoonDescription">
-                El motor determinista ZXing.Net ya detecta prefijos internacionales Bookland (978 / 979). Muy pronto podrás catalogar primeras ediciones, tapa dura y bolsillo con enriquecimiento automático de editorial y autor.
-              </p>
-              <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                <button type="button" class="btn btn-primary" onclick="app.openCreateModal()">
-                  ➕ Probar Ficha de Alta Contextual
+        <div id="vaultCatalogView" class="vault-catalog-shell">
+          <!-- Zona Superior Fija: Selector Polimórfico + Buscador + Filtros -->
+          <div class="vault-fixed-controls">
+            <section class="vault-top-bar" id="vaultToolbar" aria-label="Categorías y Búsqueda">
+              <div class="category-tabs" id="categoryTabs">
+                <button type="button" class="category-tab-btn active" data-category="music" onclick="app.setCategory('music')">
+                  <span class="category-tab-icon">🎵</span>
+                  <span class="category-tab-label">Música</span>
+                  <span class="category-tab-count" id="categoryMusicCount">0</span>
                 </button>
-                <button type="button" class="btn btn-outline-gold" onclick="app.setCategory('music')">
-                  Volver a Colección Musical
+                <button type="button" class="category-tab-btn" data-category="books" onclick="app.setCategory('books')">
+                  <span class="category-tab-icon">📚</span>
+                  <span class="category-tab-label">Libros</span>
+                  <span class="category-badge-soon">ISBN</span>
+                </button>
+                <button type="button" class="category-tab-btn" data-category="games" onclick="app.setCategory('games')">
+                  <span class="category-tab-icon">🎮</span>
+                  <span class="category-tab-label">Videojuegos</span>
+                  <span class="category-badge-soon">CIB</span>
                 </button>
               </div>
+
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
+              </div>
+            </section>
+
+            <!-- Filtros de Formato Físico (Música) -->
+            <div class="filter-chips" id="formatFilters">
+              <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+              <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
+              <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
+              <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
+              <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
             </div>
-          </section>
+          </div>
+
+          <!-- Única Zona con Scroll: Lienzo de Portadas / Categorías -->
+          <div class="vault-scroll-stage" id="vaultScrollStage">
+            <!-- Releases Grid (Crate Digging Visual Cards) -->
+            <section id="releasesGrid" class="vault-grid">
+              <!-- Renderizado dinámico de tarjetas 100% visuales -->
+            </section>
+
+            <!-- Polymorphic Category Coming Soon View (Books / Video Games) -->
+            <section id="categoryComingSoonView" class="polymorphic-coming-soon" style="display: none;">
+              <div class="coming-soon-card">
+                <div class="coming-soon-icon" id="comingSoonIcon">📚</div>
+                <div class="coming-soon-badge" id="comingSoonBadge">Arquitectura Polimórfica Preparada</div>
+                <h3 id="comingSoonTitle">Bóveda Bibliográfica &amp; Bookland ISBN</h3>
+                <p id="comingSoonDescription">
+                  El motor determinista ZXing.Net ya detecta prefijos internacionales Bookland (978 / 979). Muy pronto podrás catalogar primeras ediciones, tapa dura y bolsillo con enriquecimiento automático de editorial y autor.
+                </p>
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-primary" onclick="app.openCreateModal()">
+                    ➕ Probar Ficha de Alta Contextual
+                  </button>
+                  <button type="button" class="btn btn-outline-gold" onclick="app.setCategory('music')">
+                    Volver a Colección Musical
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
 
         <!-- ================================================================ -->

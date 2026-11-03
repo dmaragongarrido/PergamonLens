@@ -2832,3 +2832,114 @@ html, body {
     gap: 0.32rem;
   }
 }
+
+/* ==========================================================================
+   Native App Shell Architecture (100dvh Fixed Viewport & Confined Scroll)
+   ========================================================================== */
+
+html, body {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.app-container {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-app {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-app > .header {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 50;
+}
+
+.vault-app > .main-content {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0;
+  padding: 0.9rem 1.5rem calc(68px + env(safe-area-inset-bottom, 0px)) 1.5rem;
+}
+
+.vault-catalog-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.vault-fixed-controls {
+  flex-shrink: 0;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(36, 50, 71, 0.55);
+}
+
+#vaultCatalogView .filter-chips {
+  margin-bottom: 0;
+}
+
+/* Única región con scroll vertical (solo cuando el contenido supera el alto) */
+.vault-scroll-stage,
+.vault-metrics-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-bottom: 1.5rem;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.35) transparent;
+}
+
+.vault-scroll-stage::-webkit-scrollbar,
+.vault-metrics-view::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vault-scroll-stage::-webkit-scrollbar-track,
+.vault-metrics-view::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vault-scroll-stage::-webkit-scrollbar-thumb,
+.vault-metrics-view::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}
+
+.vault-scroll-stage::-webkit-scrollbar-thumb:hover,
+.vault-metrics-view::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.55);
+}
+
+@media (max-width: 640px) {
+  .vault-app > .main-content {
+    padding: 0.65rem 0.75rem calc(68px + env(safe-area-inset-bottom, 0px)) 0.75rem;
+  }
+  .vault-fixed-controls {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+}
