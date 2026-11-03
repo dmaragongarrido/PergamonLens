@@ -47,9 +47,11 @@
       const response = await fetch(url, options);
 
       if (response.status === 401) {
+        if (url.includes('/auth/login')) {
+          throw new Error('Correo electrónico o contraseña incorrectos.');
+        }
         logout(false);
         showToast('Sesión Expirada', 'Por favor inicia sesión de nuevo para acceder a tu colección.', 'error');
-        openAuthModal('login');
         throw new Error('Unauthorized');
       }
 
@@ -189,7 +191,9 @@
   function transitionToVault() {
     const welcomeView = document.getElementById('welcomeView');
     const vaultApp = document.getElementById('vaultApp');
+    const authModal = document.getElementById('authModal');
 
+    if (authModal) authModal.classList.remove('active');
     if (welcomeView) {
       welcomeView.classList.remove('fade-out');
       welcomeView.style.display = 'none';
