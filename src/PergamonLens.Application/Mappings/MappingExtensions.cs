@@ -101,6 +101,19 @@ public static class MappingExtensions
             result.Format);
     }
 
+    public static GameCatalogSearchResultDto ToDto(this GameCatalogSearchResult result)
+    {
+        return new GameCatalogSearchResultDto(
+            result.GameKey,
+            result.Title,
+            result.Developer,
+            result.ReleaseYear,
+            result.Publisher,
+            result.Platform,
+            result.CoverImageUrl,
+            result.Format);
+    }
+
     public static VisionAnalysisResultDto ToDto(this VisionExtractionResult result)
     {
         return new VisionAnalysisResultDto(

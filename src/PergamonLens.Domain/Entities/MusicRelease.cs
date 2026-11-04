@@ -487,6 +487,46 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
+    /// Enriquece el videojuego físico con información oficial del catálogo gamer.
+    /// </summary>
+    public void EnrichFromGameCatalog(
+        string gameKey,
+        string? title = null,
+        string? developer = null,
+        string? publisher = null,
+        ReleaseYear? releaseYear = null,
+        string? platform = null,
+        string? coverImageUrl = null)
+    {
+        EnsureNotConfirmed();
+
+        if (string.IsNullOrWhiteSpace(gameKey))
+        {
+            throw new MusicReleaseDomainException("El identificador de videojuego en catálogo no puede estar vacío.");
+        }
+
+        ExternalCatalogId = gameKey.Trim();
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            Title = title.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(developer))
+        {
+            Artist = developer.Trim();
+        }
+        Label = publisher?.Trim() ?? Label;
+        ReleaseYear = releaseYear ?? ReleaseYear;
+        if (!string.IsNullOrWhiteSpace(platform))
+        {
+            Platform = platform.Trim();
+        }
+        CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
+
+        Status = ProcessingStatus.Enriched;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Valida y confirma el ejemplar para su custodia en la colección personal del usuario.
     /// </summary>
     public void Confirm()

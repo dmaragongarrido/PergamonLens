@@ -23,6 +23,7 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
     private readonly ICurrentUserService _currentUserService;
     private readonly IDiscogsService _discogsService;
     private readonly IBookCatalogService? _bookCatalogService;
+    private readonly IGameCatalogService? _gameCatalogService;
     private readonly ILogger<ScanReleaseCommandHandler> _logger;
 
     public ScanReleaseCommandHandler(
@@ -31,7 +32,8 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         ICurrentUserService currentUserService,
         IDiscogsService discogsService,
         ILogger<ScanReleaseCommandHandler>? logger = null,
-        IBookCatalogService? bookCatalogService = null)
+        IBookCatalogService? bookCatalogService = null,
+        IGameCatalogService? gameCatalogService = null)
     {
         _visionService = visionService;
         _repository = repository;
@@ -39,6 +41,7 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         _discogsService = discogsService;
         _logger = logger ?? NullLogger<ScanReleaseCommandHandler>.Instance;
         _bookCatalogService = bookCatalogService;
+        _gameCatalogService = gameCatalogService;
     }
 
     public async Task<MusicReleaseDto> Handle(ScanReleaseCommand request, CancellationToken cancellationToken)
@@ -402,13 +405,33 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         MediaFormat? visionFormat,
         CancellationToken cancellationToken)
     {
-        string title = !string.IsNullOrWhiteSpace(extraction.DetectedTitle)
-            ? extraction.DetectedTitle.Trim()
-            : "Videojuego pendiente de identificación";
+        GameCatalogSearchResult? gameMatch = null;
+        if (_gameCatalogService is not null && !string.IsNullOrWhiteSpace(extraction.DetectedTitle))
+        {
+            try
+            {
+                _logger.LogInformation("Consultando catálogo de videojuegos para '{Title}' ({Platform})...",
+                    extraction.DetectedTitle, extraction.DetectedPlatform);
+                var matches = await _gameCatalogService.SearchByQueryAsync(
+                    extraction.DetectedTitle,
+                    extraction.DetectedPlatform ?? extraction.DetectedArtist,
+                    cancellationToken);
+                gameMatch = matches.FirstOrDefault(m => !string.IsNullOrWhiteSpace(m.CoverImageUrl))
+                    ?? matches.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error no fatal al consultar catálogo de videojuegos para '{Title}'", extraction.DetectedTitle);
+            }
+        }
 
-        string studio = !string.IsNullOrWhiteSpace(extraction.DetectedArtist)
-            ? extraction.DetectedArtist.Trim()
-            : (!string.IsNullOrWhiteSpace(extraction.DetectedLabel) ? extraction.DetectedLabel.Trim() : "Estudio desconocido");
+        string title = gameMatch?.Title
+            ?? (!string.IsNullOrWhiteSpace(extraction.DetectedTitle) ? extraction.DetectedTitle.Trim() : "Videojuego pendiente de identificación");
+
+        string studio = gameMatch?.Developer
+            ?? (!string.IsNullOrWhiteSpace(extraction.DetectedArtist)
+                ? extraction.DetectedArtist.Trim()
+                : (!string.IsNullOrWhiteSpace(extraction.DetectedLabel) ? extraction.DetectedLabel.Trim() : "Estudio desconocido"));
 
         var resolvedFormat = visionFormat?.GetCategory() == MediaCategory.VideoGames
             ? visionFormat.Value
@@ -421,13 +444,33 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
             title,
             studio,
             resolvedFormat,
-            platform: extraction.DetectedPlatform,
+            platform: extraction.DetectedPlatform ?? gameMatch?.Platform,
             barcode: barcode,
             productCode: catalogueNumber,
-            publisher: extraction.DetectedLabel,
-            notes: $"Análisis visual IA de videojuego (confianza: {extraction.Confidence:P0}).");
+            publisher: gameMatch?.Publisher ?? extraction.DetectedLabel,
+            coverImageUrl: gameMatch?.CoverImageUrl,
+            notes: $"Análisis visual IA de videojuego (confianza: {extraction.Confidence:P0}).",
+            externalCatalogId: gameMatch?.GameKey);
 
-        if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle))
+        if (gameMatch is not null)
+        {
+            ReleaseYear? pubYear = null;
+            int? candidateYear = gameMatch.ReleaseYear ?? extraction.DetectedReleaseYear;
+            if (candidateYear.HasValue && ReleaseYear.TryCreate(candidateYear.Value, out var parsedYear, out _))
+            {
+                pubYear = parsedYear;
+            }
+
+            gameRelease.EnrichFromGameCatalog(
+                gameMatch.GameKey,
+                gameMatch.Title,
+                gameMatch.Developer,
+                gameMatch.Publisher ?? extraction.DetectedLabel,
+                pubYear,
+                extraction.DetectedPlatform ?? gameMatch.Platform,
+                gameMatch.CoverImageUrl);
+        }
+        else if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle))
         {
             ReleaseYear? yearFromVision = null;
             if (extraction.DetectedReleaseYear.HasValue &&

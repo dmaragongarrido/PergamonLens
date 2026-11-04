@@ -3014,3 +3014,97 @@ html, body {
   color: #d8b4fe;
   border: 1px solid rgba(168, 85, 247, 0.45);
 }
+
+
+/* ============================================================================
+   HITO 8 (Subfase 8.2): Tarjetas Físicas de Videojuegos & Geometría Adaptativa
+   ============================================================================ */
+.vault-grid.category-books,
+.vault-grid.category-games {
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+
+.crate-card.pure-visual-card.book-visual-card .crate-media-stage {
+  padding: 0.85rem 1.25rem 0.85rem 0.85rem;
+}
+
+.crate-card.pure-visual-card.book-visual-card .card-cover-wrapper {
+  aspect-ratio: 2 / 3;
+  border-radius: 3px 6px 6px 3px;
+}
+
+.crate-card.pure-visual-card.book-visual-card .book-pages-peek {
+  top: 4.5%;
+  bottom: 4.5%;
+  right: 0.45rem;
+  width: 14px;
+}
+
+.crate-card.pure-visual-card.game-visual-card .crate-media-stage {
+  padding: 0.85rem 1.55rem 0.85rem 0.85rem;
+}
+
+.crate-card.pure-visual-card.game-visual-card .card-cover-wrapper {
+  aspect-ratio: 3 / 4;
+  border-radius: 4px 7px 7px 4px;
+}
+
+.game-visual-card .cd-disc-peek {
+  width: 72%;
+  right: 0.35rem;
+}
+
+.game-case-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.02) 32%,
+    transparent 55%
+  );
+  border-top: 3px solid rgba(56, 189, 248, 0.45);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.game-cartridge-peek {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  right: 0.45rem;
+  width: 15px;
+  border-radius: 0 5px 5px 0;
+  background: linear-gradient(180deg, #334155 0%, #1e293b 50%, #0f172a 100%);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.65);
+  z-index: 1;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.game-visual-card:hover .game-cartridge-peek {
+  transform: translateX(5px);
+}
+
+.catalog-result-thumb.thumb-vertical {
+  width: 44px;
+  height: 62px;
+}
+
+.format-badge.opticaldiscgame {
+  background: rgba(56, 189, 248, 0.22);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+}
+
+.format-badge.cartridge {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.format-badge.gamecollectoredition {
+  background: rgba(212, 175, 55, 0.25);
+  color: #fde047;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+}

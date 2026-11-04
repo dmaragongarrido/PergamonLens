@@ -83,6 +83,7 @@ app.MapMusicReleaseEndpoints();
 app.MapCollectionEndpoints();
 app.MapDiscogsEndpoints();
 app.MapBookCatalogEndpoints();
+app.MapGameCatalogEndpoints();
 
 // Root endpoint: Redirige al navegador a la interfaz Web o devuelve JSON de estado para APIs/Tests
 app.MapGet("/", (HttpContext context) =>

@@ -133,7 +133,7 @@
                 <button type="button" class="category-tab-btn" data-category="games" onclick="app.setCategory('games')">
                   <span class="category-tab-icon">🎮</span>
                   <span class="category-tab-label">Videojuegos</span>
-                  <span class="category-badge-soon">CIB</span>
+                  <span class="category-tab-count" id="categoryGamesCount">0</span>
                 </button>
               </div>
 
@@ -461,6 +461,34 @@
               <div class="form-group">
                 <label class="form-label">Estándar de Catalogación</label>
                 <input type="text" class="form-input" disabled value="Bookland ISBN / OpenLibrary">
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 1rem; display: none;" id="gameSpecificFields">
+              <div class="form-group">
+                <label class="form-label">Plataforma / Consola</label>
+                <input type="text" id="createPlatform" list="platformSuggestions" class="form-input" placeholder="Ej. PlayStation 5, Nintendo Switch, SNES...">
+                <datalist id="platformSuggestions">
+                  <option value="PlayStation 5"></option>
+                  <option value="PlayStation 4"></option>
+                  <option value="PlayStation 3"></option>
+                  <option value="PlayStation 2"></option>
+                  <option value="PlayStation (PS1)"></option>
+                  <option value="Nintendo Switch"></option>
+                  <option value="Super Nintendo (SNES)"></option>
+                  <option value="Nintendo 64"></option>
+                  <option value="GameCube"></option>
+                  <option value="Game Boy / GBA"></option>
+                  <option value="Sega Mega Drive"></option>
+                  <option value="Dreamcast"></option>
+                  <option value="Xbox Series X"></option>
+                  <option value="Xbox 360"></option>
+                  <option value="PC Big Box / DVD"></option>
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Estándar de Conservación</label>
+                <input type="text" class="form-input" disabled value="CIB (Caja, Manual y Soporte)">
               </div>
             </div>
 

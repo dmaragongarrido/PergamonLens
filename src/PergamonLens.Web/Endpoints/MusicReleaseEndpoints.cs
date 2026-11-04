@@ -6,6 +6,7 @@ using PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 using PergamonLens.Application.MusicReleases.Commands.DeleteRelease;
 using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromBookCatalog;
 using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromDiscogs;
+using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromGameCatalog;
 using PergamonLens.Application.MusicReleases.Commands.ScanRelease;
 using PergamonLens.Application.MusicReleases.Queries.GetCollection;
 using PergamonLens.Application.MusicReleases.Queries.GetReleaseById;
@@ -184,6 +185,31 @@ public static class MusicReleaseEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        group.MapPost("/{id:guid}/enrich-game", async (
+            Guid id,
+            [FromBody] EnrichGameReleaseRequest request,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var command = new EnrichReleaseFromGameCatalogCommand(
+                ReleaseId: id,
+                GameKey: request.GameKey,
+                Title: request.Title,
+                Developer: request.Developer,
+                Publisher: request.Publisher,
+                ReleaseYear: request.ReleaseYear,
+                Platform: request.Platform,
+                CoverImageUrl: request.CoverImageUrl);
+
+            var result = await sender.Send(command, ct);
+            return Results.Ok(result);
+        })
+        .WithName("EnrichReleaseFromGameCatalog")
+        .WithSummary("Enriquece los metadatos de un videojuego físico desde el catálogo gamer")
+        .Produces<MusicReleaseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         group.MapDelete("/{id:guid}", async (
             Guid id,
             ISender sender,
@@ -219,3 +245,12 @@ public sealed record EnrichBookReleaseRequest(
     int? PagesCount = null,
     string? CoverImageUrl = null,
     string? Isbn = null);
+
+public sealed record EnrichGameReleaseRequest(
+    string GameKey,
+    string? Title = null,
+    string? Developer = null,
+    string? Publisher = null,
+    int? ReleaseYear = null,
+    string? Platform = null,
+    string? CoverImageUrl = null);
