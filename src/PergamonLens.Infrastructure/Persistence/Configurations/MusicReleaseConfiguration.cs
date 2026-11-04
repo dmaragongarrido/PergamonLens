@@ -29,7 +29,8 @@ public sealed class MusicReleaseConfiguration : IEntityTypeConfiguration<MusicRe
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(30)
-            .HasDefaultValue(MediaCategory.Music);
+            .HasDefaultValue(MediaCategory.Music)
+            .HasSentinel(default(MediaCategory));
 
         builder.Property(x => x.Title)
             .IsRequired()
