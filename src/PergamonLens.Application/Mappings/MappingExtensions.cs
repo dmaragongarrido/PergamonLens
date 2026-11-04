@@ -53,7 +53,11 @@ public static class MappingExtensions
             release.Notes,
             release.CreatedAtUtc,
             release.UpdatedAtUtc,
-            release.Tracks.Select(t => t.ToDto()).ToList());
+            release.Tracks.Select(t => t.ToDto()).ToList(),
+            release.Category.ToString(),
+            release.PagesCount,
+            release.Platform,
+            release.ExternalCatalogId);
     }
 
     public static CollectionStatisticsDto ToDto(this CollectionStatistics stats)
@@ -81,6 +85,20 @@ public static class MappingExtensions
             result.CatalogueNumber,
             result.Country,
             result.CoverThumbUrl);
+    }
+
+    public static BookCatalogSearchResultDto ToDto(this BookCatalogSearchResult result)
+    {
+        return new BookCatalogSearchResultDto(
+            result.EditionKey,
+            result.Title,
+            result.Author,
+            result.PublishYear,
+            result.Publisher,
+            result.Isbn,
+            result.PagesCount,
+            result.CoverImageUrl,
+            result.Format);
     }
 
     public static VisionAnalysisResultDto ToDto(this VisionExtractionResult result)

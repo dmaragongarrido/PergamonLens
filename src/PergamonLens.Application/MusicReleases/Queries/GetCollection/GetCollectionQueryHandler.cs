@@ -7,7 +7,7 @@ using PergamonLens.Domain.Repositories;
 namespace PergamonLens.Application.MusicReleases.Queries.GetCollection;
 
 /// <summary>
-/// Manejador de la consulta de colección de lanzamientos físicos.
+/// Manejador de la consulta de colección de lanzamientos y ejemplares físicos.
 /// </summary>
 public sealed class GetCollectionQueryHandler : IRequestHandler<GetCollectionQuery, IReadOnlyList<MusicReleaseDto>>
 {
@@ -42,6 +42,11 @@ public sealed class GetCollectionQueryHandler : IRequestHandler<GetCollectionQue
         // Aplicar filtros adicionales en memoria si se especificaron simultáneamente
         var filtered = releases.AsEnumerable();
 
+        if (request.Category.HasValue)
+        {
+            filtered = filtered.Where(r => r.Category == request.Category.Value);
+        }
+
         if (request.Format.HasValue && !string.IsNullOrWhiteSpace(request.SearchQuery))
         {
             filtered = filtered.Where(r => r.Format == request.Format.Value);
@@ -57,4 +62,3 @@ public sealed class GetCollectionQueryHandler : IRequestHandler<GetCollectionQue
             .ToList();
     }
 }
-

@@ -2943,3 +2943,74 @@ html, body {
     margin-bottom: 0.6rem;
   }
 }
+
+
+/* ============================================================================
+   HITO 8 (Subfase 8.1): Tarjetas Físicas de Libros & Cómics (Book Spine & Pages)
+   ============================================================================ */
+.book-visual-card .crate-media-stage {
+  padding-right: 10px;
+}
+
+.book-pages-peek {
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  right: 2px;
+  width: 12px;
+  border-radius: 0 3px 3px 0;
+  background: repeating-linear-gradient(
+    to right,
+    #e2dac9 0px,
+    #f5efe2 1.5px,
+    #cfc5b2 3px
+  );
+  box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.35), 4px 4px 12px rgba(0, 0, 0, 0.55);
+  z-index: 1;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.book-visual-card:hover .book-pages-peek {
+  transform: translateX(4px);
+}
+
+.book-spine-crease {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.58) 0%,
+    rgba(255, 255, 255, 0.18) 38%,
+    rgba(0, 0, 0, 0.42) 68%,
+    transparent 100%
+  );
+  z-index: 3;
+  pointer-events: none;
+}
+
+.format-badge.hardcover {
+  background: rgba(212, 175, 55, 0.22);
+  color: #f6d365;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+}
+
+.format-badge.paperback {
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.format-badge.comicmanga {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.45);
+}
+
+.format-badge.bookspecialedition {
+  background: rgba(168, 85, 247, 0.22);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+}
