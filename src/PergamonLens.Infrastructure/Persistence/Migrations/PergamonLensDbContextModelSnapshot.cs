@@ -172,6 +172,13 @@ namespace PergamonLens.Infrastructure.Persistence.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Music");
+
                     b.Property<string>("Country")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -191,6 +198,10 @@ namespace PergamonLens.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<string>("ExternalCatalogId")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -207,6 +218,13 @@ namespace PergamonLens.Infrastructure.Persistence.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<int?>("PagesCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Platform")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int?>("ReleaseYear")
                         .HasColumnType("integer");
@@ -259,13 +277,14 @@ namespace PergamonLens.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "Status");
 
+                    b.HasIndex("UserId", "Category", "CreatedAtUtc");
+
                     b.ToTable("MusicReleases", (string)null);
                 });
 
             modelBuilder.Entity("PergamonLens.Domain.Entities.Track", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<TimeSpan?>("Duration")

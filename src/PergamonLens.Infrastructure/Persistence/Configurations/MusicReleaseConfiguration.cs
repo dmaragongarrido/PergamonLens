@@ -25,6 +25,13 @@ public sealed class MusicReleaseConfiguration : IEntityTypeConfiguration<MusicRe
             .HasConversion(id => id.Value, val => UserId.From(val))
             .HasMaxLength(450);
 
+        builder.Property(x => x.Category)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .HasDefaultValue(MediaCategory.Music)
+            .HasSentinel(default(MediaCategory));
+
         builder.Property(x => x.Title)
             .IsRequired()
             .HasMaxLength(500);
@@ -66,6 +73,14 @@ public sealed class MusicReleaseConfiguration : IEntityTypeConfiguration<MusicRe
         builder.Property(x => x.VinylSpeed)
             .HasConversion<string>()
             .HasMaxLength(20);
+
+        builder.Property(x => x.PagesCount);
+
+        builder.Property(x => x.Platform)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.ExternalCatalogId)
+            .HasMaxLength(120);
 
         builder.Property(x => x.MediaCondition)
             .HasConversion<string>()
@@ -109,8 +124,9 @@ public sealed class MusicReleaseConfiguration : IEntityTypeConfiguration<MusicRe
         builder.Navigation(x => x.Tracks)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-        // Índices para optimizar búsquedas, aislamiento multi-usuario y consultas frecuentes
+        // Índices para optimizar búsquedas, aislamiento multi-usuario y consultas frecuentes (1.000+ usuarios simultáneos)
         builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => new { x.UserId, x.Category, x.CreatedAtUtc });
         builder.HasIndex(x => new { x.UserId, x.Format });
         builder.HasIndex(x => new { x.UserId, x.Status });
         builder.HasIndex(x => x.Barcode);

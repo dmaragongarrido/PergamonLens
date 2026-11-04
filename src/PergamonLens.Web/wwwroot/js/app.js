@@ -16,6 +16,7 @@
   const state = {
     token: localStorage.getItem(STORAGE_TOKEN_KEY) || null,
     userEmail: localStorage.getItem(STORAGE_EMAIL_KEY) || null,
+    allReleases: [],
     releases: [],
     statistics: null,
     currentCategory: 'music', // 'music' | 'books' | 'games'
@@ -25,9 +26,49 @@
     selectedScanBlob: null,
     selectedScanFileName: null,
     cameraStream: null,
-    cameraFacingMode: 'environment', // Trasera por defecto para capturar álbumes
-    authMode: 'login' // 'login' | 'register'
+    cameraFacingMode: 'environment', // Trasera por defecto para capturar álbumes/libros
+    authMode: 'login', // 'login' | 'register'
+    enrichCategory: 'Music', // 'Music' | 'Books' | 'VideoGames'
+    catalogSearchResults: [],
+    selectedBookEdition: null,
+    selectedGameEdition: null
   };
+
+  const FORMAT_LABELS = {
+    Vinyl: 'Vinilo',
+    CD: 'CD',
+    Cassette: 'Casete',
+    BoxSet: 'Box Set',
+    Hardcover: 'Tapa Dura',
+    Paperback: 'Rústica',
+    ComicManga: 'Cómic / Manga',
+    BookSpecialEdition: 'Ed. Especial',
+    OpticalDiscGame: 'Disco Óptico',
+    Cartridge: 'Cartucho',
+    GameCollectorEdition: 'Ed. Coleccionista'
+  };
+
+  function getFormatDisplayLabel(format) {
+    return FORMAT_LABELS[format] || format || 'Soporte';
+  }
+
+  function isBookRelease(r) {
+    if (!r) return false;
+    if (r.category === 'Books') return true;
+    return ['Hardcover', 'Paperback', 'ComicManga', 'BookSpecialEdition'].includes(r.format);
+  }
+
+  function isGameRelease(r) {
+    if (!r) return false;
+    if (r.category === 'VideoGames') return true;
+    return ['OpticalDiscGame', 'Cartridge', 'GameCollectorEdition'].includes(r.format);
+  }
+
+  function getReleaseCategoryKey(r) {
+    if (isBookRelease(r)) return 'books';
+    if (isGameRelease(r)) return 'games';
+    return 'music';
+  }
 
   // ============================================================================
   // Cliente HTTP REST con inyección de JWT y manejo RFC 7807 ProblemDetails
@@ -305,7 +346,7 @@
   }
 
   // ============================================================================
-  // Autenticación de Usuario (Punto #3: Badge compacto sin desbordar en móvil)
+  // Autenticación de Usuario (Badge compacto sin desbordar en móvil)
   // ============================================================================
   function renderAuthStatus() {
     const container = document.getElementById('authStatusContainer');
@@ -426,6 +467,7 @@
   function logout(showMessage = true) {
     state.token = null;
     state.userEmail = null;
+    state.allReleases = [];
     state.releases = [];
     state.statistics = null;
     localStorage.removeItem(STORAGE_TOKEN_KEY);
@@ -441,7 +483,7 @@
   }
 
   // ============================================================================
-  // Carga de Datos: Colección & Estadísticas
+  // Carga de Datos: Colección & Estadísticas Polimórficas
   // ============================================================================
   async function loadStatistics() {
     if (!state.token) return;
@@ -454,6 +496,32 @@
     }
   }
 
+  function updateCategoryCounters() {
+    const musicItems = state.allReleases.filter(r => getReleaseCategoryKey(r) === 'music');
+    const bookItems = state.allReleases.filter(r => getReleaseCategoryKey(r) === 'books');
+    const gameItems = state.allReleases.filter(r => getReleaseCategoryKey(r) === 'games');
+
+    const musicCountEl = document.getElementById('categoryMusicCount');
+    if (musicCountEl) musicCountEl.textContent = String(musicItems.length);
+
+    const booksCountEl = document.getElementById('categoryBooksCount');
+    if (booksCountEl) booksCountEl.textContent = String(bookItems.length);
+
+    const gamesCountEl = document.getElementById('categoryGamesCount');
+    if (gamesCountEl) gamesCountEl.textContent = String(gameItems.length);
+
+    const metricsBooksEl = document.getElementById('metricsBooksSummary');
+    if (metricsBooksEl) {
+      const totalPages = bookItems.reduce((acc, b) => acc + (b.pagesCount || 0), 0);
+      metricsBooksEl.textContent = `${bookItems.length} ejemplar(es) registrados${totalPages > 0 ? ` • ${totalPages.toLocaleString('es-ES')} páginas catalogadas` : ' • Catálogo OpenLibrary & Bookland 978/979 activos'}`;
+    }
+
+    const metricsGamesEl = document.getElementById('metricsGamesSummary');
+    if (metricsGamesEl) {
+      metricsGamesEl.textContent = `${gameItems.length} edición(es) registradas • Graduación de caja, manual y soporte`;
+    }
+  }
+
   function renderStatistics(stats) {
     document.getElementById('statTotal').textContent = stats ? (stats.totalReleases || 0) : '0';
     document.getElementById('statVinyls').textContent = stats ? (stats.formatBreakdown?.Vinyl || 0) : '0';
@@ -461,8 +529,7 @@
     document.getElementById('statCassettes').textContent = stats ? (stats.formatBreakdown?.Cassette || 0) : '0';
     document.getElementById('statTracks').textContent = stats ? (stats.totalTracks || 0) : '0';
     document.getElementById('statConfirmed').textContent = stats ? (stats.confirmedReleases || 0) : '0';
-    const musicCountEl = document.getElementById('categoryMusicCount');
-    if (musicCountEl) musicCountEl.textContent = stats ? (stats.totalReleases || 0) : '0';
+    updateCategoryCounters();
   }
 
   async function loadReleases() {
@@ -475,23 +542,25 @@
     grid.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
         <div class="spinner" style="margin: 0 auto 1rem; width: 28px; height: 28px; border-width: 3px;"></div>
-        Cargando bóveda de lanzamientos...
+        Cargando bóveda...
       </div>
     `;
 
     try {
       const params = new URLSearchParams();
-      if (state.currentFilter && state.currentFilter !== 'all') {
-        params.append('format', state.currentFilter);
-      }
       if (state.searchQuery && state.searchQuery.trim().length > 0) {
         params.append('q', state.searchQuery.trim());
       }
 
       const queryString = params.toString() ? `?${params.toString()}` : '';
-      const releases = await apiFetch(`/api/releases${queryString}`);
-      state.releases = releases || [];
-      renderReleases(state.releases);
+      const allReleases = await apiFetch(`/api/releases${queryString}`);
+      state.allReleases = allReleases || [];
+
+      if (!state.searchQuery) {
+        updateCategoryCounters();
+      }
+
+      applyClientCategoryAndFormatFilter();
     } catch (err) {
       grid.innerHTML = `
         <div class="vault-empty-state">
@@ -506,16 +575,32 @@
     }
   }
 
+  function applyClientCategoryAndFormatFilter() {
+    const activeCat = state.currentCategory || 'music';
+    let filtered = state.allReleases.filter(r => getReleaseCategoryKey(r) === activeCat);
+
+    if (state.currentFilter && state.currentFilter !== 'all') {
+      filtered = filtered.filter(r => r.format === state.currentFilter);
+    }
+
+    state.releases = filtered;
+    renderReleases(state.releases);
+  }
+
   function renderReleases(releases) {
     const grid = document.getElementById('releasesGrid');
     if (!grid) return;
+
+    grid.classList.toggle('category-music', state.currentCategory === 'music');
+    grid.classList.toggle('category-books', state.currentCategory === 'books');
+    grid.classList.toggle('category-games', state.currentCategory === 'games');
 
     if (!state.token) {
       grid.innerHTML = `
         <div class="vault-empty-state">
           <div class="empty-state-icon">🏛️</div>
           <h3>Bienvenido a tu Bóveda Personal</h3>
-          <p>Inicia sesión o crea una cuenta gratuita de coleccionista para empezar a catalogar y preservar tus vinilos, CDs y casetes con IA.</p>
+          <p>Inicia sesión o crea una cuenta gratuita de coleccionista para empezar a catalogar y preservar tus discos, libros y videojuegos con IA.</p>
           <button class="btn btn-primary" onclick="app.openAuthModal('login')">Acceder a mi Colección</button>
         </div>
       `;
@@ -523,16 +608,29 @@
     }
 
     if (!releases || releases.length === 0) {
+      const isBooks = state.currentCategory === 'books';
+      const isGames = state.currentCategory === 'games';
+      const emptyIcon = isBooks ? '📚' : isGames ? '🎮' : '💿';
+      const emptyTitle = isBooks
+        ? 'No se encontraron libros en tu biblioteca'
+        : isGames
+          ? 'No se encontraron videojuegos en tu bóveda'
+          : 'No se encontraron lanzamientos';
+      const emptyDesc = state.searchQuery
+        ? 'Prueba a cambiar los términos de búsqueda o el filtro de formato.'
+        : isBooks
+          ? 'Tu bóveda bibliográfica está vacía. Escanea el código ISBN o la cubierta de tu primer libro con la cámara o añádelo manualmente.'
+          : isGames
+            ? 'Tu colección de videojuegos está vacía. Escanea la carátula o código de barras de tu primer juego físico o añádelo manualmente.'
+            : 'Tu colección musical está vacía. Escanea tu primer soporte físico con la cámara o añádelo manualmente.';
+
       grid.innerHTML = `
         <div class="vault-empty-state">
-          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-          <h3>No se encontraron lanzamientos</h3>
-          <p>${state.searchQuery ? 'Prueba a cambiar los términos de búsqueda o filtros.' : 'Tu colección está vacía. Escanea tu primer soporte físico con la cámara o añádelo manualmente.'}</p>
+          <div class="empty-state-icon" style="font-size: 2.3rem;">${emptyIcon}</div>
+          <h3>${emptyTitle}</h3>
+          <p>${emptyDesc}</p>
           <div style="display: flex; gap: 0.75rem;">
-            <button class="btn btn-primary" onclick="app.openScannerModal()">📸 Escanear Portada</button>
+            <button class="btn btn-primary" onclick="app.openScannerModal()">📸 Escanear ${isBooks ? 'Libro / ISBN' : isGames ? 'Videojuego' : 'Portada'}</button>
             <button class="btn btn-secondary" onclick="app.openCreateModal()">➕ Alta Manual</button>
           </div>
         </div>
@@ -559,14 +657,16 @@
   }
 
   // ============================================================================
-  // Punto #9: Tarjetas 100% Visuales (Crate Digging Puro sin caja inferior)
+  // Tarjetas 100% Visuales (Crate Digging / Biblioteca Física)
   // ============================================================================
   function createReleaseCardHtml(r) {
     const formatClass = (r.format || 'Vinyl').toLowerCase();
     const statusClass = (r.status || 'PendingAnalysis').toLowerCase();
+    const isBook = isBookRelease(r);
+    const isGame = isGameRelease(r);
 
     const coverHtml = r.coverImageUrl
-      ? `<img src="${escapeHtml(r.coverImageUrl)}" alt="${escapeHtml(r.title)}" class="cover-image" loading="lazy" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML=app.getPlaceholderGroovesHtml('${escapeHtml(r.format)}');">`
+      ? `<img src="${escapeHtml(r.coverImageUrl)}" alt="${escapeHtml(r.title)}" class="cover-image" loading="lazy" onerror="if(this.src.includes('library_600x900.jpg')){this.src=this.src.replace('shared.akamai.steamstatic.com/store_item_assets/steam/apps/','cdn.akamai.steamstatic.com/steam/apps/').replace('library_600x900.jpg','header.jpg');return;}this.onerror=null; this.src=''; this.parentElement.innerHTML=app.getPlaceholderGroovesHtml('${escapeHtml(r.format)}');">`
       : getPlaceholderGroovesHtml(r.format);
 
     const shortCondition = getGoldmineShortCode(r.mediaCondition);
@@ -580,7 +680,7 @@
     else if (r.status === 'Enriched') statusLabel = 'Enriquecido';
     else if (r.status === 'Confirmed') statusLabel = 'Confirmado';
 
-    // Artefacto físico asomando según el soporte (Vinilo vs CD)
+    // Artefacto físico asomando según el soporte (Vinilo vs CD vs Libro vs Videojuego)
     let physicalArtifactHtml = '';
     if (formatClass === 'vinyl') {
       physicalArtifactHtml = `
@@ -590,23 +690,43 @@
           </div>
         </div>
       `;
-    } else if (formatClass === 'cd') {
+    } else if (formatClass === 'cd' || formatClass === 'opticaldiscgame') {
       physicalArtifactHtml = `
         <div class="cd-disc-peek" aria-hidden="true">
           <div class="cd-disc-hole"></div>
         </div>
       `;
+    } else if (isBook) {
+      physicalArtifactHtml = `
+        <div class="book-pages-peek" aria-hidden="true"></div>
+      `;
+    } else if (formatClass === 'cartridge') {
+      physicalArtifactHtml = `
+        <div class="game-cartridge-peek" aria-hidden="true"></div>
+      `;
     }
 
+    const spineDecoratorHtml = formatClass === 'cd'
+      ? '<div class="cd-spine-ribs" aria-hidden="true"></div><div class="cd-glare" aria-hidden="true"></div>'
+      : isBook
+        ? '<div class="book-spine-crease" aria-hidden="true"></div>'
+        : isGame
+          ? '<div class="game-case-glare" aria-hidden="true"></div>'
+          : '<div class="sleeve-spine" aria-hidden="true"></div>';
+
+    const badgeDisplayText = (isGame && r.platform)
+      ? `🎮 ${r.platform}`
+      : getFormatDisplayLabel(r.format);
+
     return `
-      <article class="release-card crate-card pure-visual-card format-${formatClass}" data-id="${r.id}" onclick="app.openDetailModal('${r.id}')">
+      <article class="release-card crate-card pure-visual-card format-${formatClass} ${isBook ? 'book-visual-card' : ''} ${isGame ? 'game-visual-card' : ''}" data-id="${r.id}" onclick="app.openDetailModal('${r.id}')">
         <div class="crate-media-stage">
           ${physicalArtifactHtml}
           <div class="card-cover-wrapper">
-            ${formatClass === 'cd' ? '<div class="cd-spine-ribs" aria-hidden="true"></div><div class="cd-glare" aria-hidden="true"></div>' : '<div class="sleeve-spine" aria-hidden="true"></div>'}
+            ${spineDecoratorHtml}
             ${coverHtml}
             <div class="card-badges-top">
-              <span class="format-badge ${formatClass}">${escapeHtml(r.format)}</span>
+              <span class="format-badge ${formatClass}">${escapeHtml(badgeDisplayText)}</span>
               <span class="status-badge ${statusClass}">
                 <span class="status-dot"></span>
                 ${escapeHtml(statusLabel)}
@@ -626,7 +746,26 @@
   }
 
   function getPlaceholderGroovesHtml(format) {
-    const isVinyl = (format || '').toLowerCase().includes('vinyl');
+    const f = (format || '').toLowerCase();
+    const isBook = f.includes('hardcover') || f.includes('paperback') || f.includes('comic') || f.includes('book');
+    if (isBook) {
+      return `
+        <div class="vinyl-placeholder book-placeholder">
+          <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">📚</div>
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.08em; text-transform: uppercase;">${escapeHtml(getFormatDisplayLabel(format))}</div>
+        </div>
+      `;
+    }
+    const isGame = f.includes('game') || f.includes('cartridge');
+    if (isGame) {
+      return `
+        <div class="vinyl-placeholder game-placeholder">
+          <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">🎮</div>
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--accent-cyan); letter-spacing: 0.08em; text-transform: uppercase;">${escapeHtml(getFormatDisplayLabel(format))}</div>
+        </div>
+      `;
+    }
+    const isVinyl = f.includes('vinyl');
     return `
       <div class="vinyl-placeholder">
         <div class="vinyl-grooves">
@@ -639,10 +778,42 @@
   }
 
   // ============================================================================
-  // Puntos #4, #5 y #6: Vistas Independientes (Bóveda vs Métricas) & Buscador Polimórfico
+  // Navegación Polimórfica de Categorías (Música, Libros, Videojuegos)
   // ============================================================================
+  function renderFormatFilterChips(category) {
+    const formatFilters = document.getElementById('formatFilters');
+    if (!formatFilters) return;
+
+    if (category === 'books') {
+      formatFilters.innerHTML = `
+        <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+        <button class="chip-btn" data-format="Hardcover" onclick="app.setFormatFilter('Hardcover')">📕 Tapa Dura</button>
+        <button class="chip-btn" data-format="Paperback" onclick="app.setFormatFilter('Paperback')">📖 Rústica / Bolsillo</button>
+        <button class="chip-btn" data-format="ComicManga" onclick="app.setFormatFilter('ComicManga')">🗯️ Cómic / Manga</button>
+        <button class="chip-btn" data-format="BookSpecialEdition" onclick="app.setFormatFilter('BookSpecialEdition')">✨ Ed. Especial</button>
+      `;
+    } else if (category === 'games') {
+      formatFilters.innerHTML = `
+        <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+        <button class="chip-btn" data-format="OpticalDiscGame" onclick="app.setFormatFilter('OpticalDiscGame')">💿 Disco Óptico</button>
+        <button class="chip-btn" data-format="Cartridge" onclick="app.setFormatFilter('Cartridge')">🕹️ Cartucho / Tarjeta</button>
+        <button class="chip-btn" data-format="GameCollectorEdition" onclick="app.setFormatFilter('GameCollectorEdition')">🏆 Ed. Coleccionista</button>
+      `;
+    } else {
+      formatFilters.innerHTML = `
+        <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+        <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
+        <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
+        <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
+        <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
+      `;
+    }
+  }
+
   function setCategory(category) {
     state.currentCategory = category;
+    state.currentFilter = 'all';
+
     const tabs = document.querySelectorAll('#categoryTabs .category-tab-btn');
     tabs.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.category === category);
@@ -653,49 +824,21 @@
     const grid = document.getElementById('releasesGrid');
     const comingSoon = document.getElementById('categoryComingSoonView');
 
-    // Actualizar placeholder del buscador polimórfico según categoría activa (#6)
     if (searchInput) {
       if (category === 'music') {
         searchInput.placeholder = 'Buscar por artista, álbum, sello, código de barras...';
       } else if (category === 'books') {
         searchInput.placeholder = 'Buscar por título, autor, editorial, ISBN...';
       } else if (category === 'games') {
-        searchInput.placeholder = 'Buscar por título, plataforma, estudio, EAN...';
+        searchInput.placeholder = 'Buscar por título, consola (PS5, Switch...), estudio, EAN...';
       }
     }
 
-    if (category === 'music') {
-      if (formatFilters) formatFilters.style.display = 'flex';
-      if (grid) grid.style.display = '';
-      if (comingSoon) comingSoon.style.display = 'none';
-      return;
-    }
-
-    if (formatFilters) formatFilters.style.display = 'none';
-    if (grid) grid.style.display = 'none';
-    if (comingSoon) {
-      comingSoon.style.display = 'block';
-      const iconEl = document.getElementById('comingSoonIcon');
-      const badgeEl = document.getElementById('comingSoonBadge');
-      const titleEl = document.getElementById('comingSoonTitle');
-      const descEl = document.getElementById('comingSoonDescription');
-
-      if (category === 'books') {
-        if (iconEl) iconEl.textContent = '📚';
-        if (badgeEl) badgeEl.textContent = 'Motor ISBN Bookland Listo';
-        if (titleEl) titleEl.textContent = 'Bóveda Bibliográfica & Primeras Ediciones';
-        if (descEl) {
-          descEl.textContent = 'El decodificador local ZXing.Net ya detecta prefijos internacionales Bookland (978 y 979). Puedes probar el formulario contextual de Alta Manual adaptado a libros o usar el buscador superior.';
-        }
-      } else if (category === 'games') {
-        if (iconEl) iconEl.textContent = '🎮';
-        if (badgeEl) badgeEl.textContent = 'Conservación CIB (Caja, Manual y Soporte)';
-        if (titleEl) titleEl.textContent = 'Bóveda de Videojuegos Físicos & Retro';
-        if (descEl) {
-          descEl.textContent = 'Diseñado para coleccionistas de ediciones físicas de consola y PC. Puedes abrir el formulario contextual de Alta Manual adaptado a videojuegos desde el botón inferior.';
-        }
-      }
-    }
+    renderFormatFilterChips(category);
+    if (formatFilters) formatFilters.style.display = 'flex';
+    if (grid) grid.style.display = '';
+    if (comingSoon) comingSoon.style.display = 'none';
+    applyClientCategoryAndFormatFilter();
   }
 
   function switchMobileNav(section) {
@@ -722,7 +865,6 @@
       return;
     }
 
-    // Mostrar vista de Catálogo (Bóveda o Buscar) en modo App Shell flex
     if (metricsView) metricsView.style.display = 'none';
     if (catalogView) catalogView.style.display = 'flex';
 
@@ -744,21 +886,19 @@
     chips.forEach(chip => {
       chip.classList.toggle('active', chip.dataset.format === format);
     });
-    loadReleases();
+    applyClientCategoryAndFormatFilter();
   }
 
   function handleSearchInput(e) {
     clearTimeout(state.searchDebounceTimer);
     state.searchDebounceTimer = setTimeout(() => {
       state.searchQuery = e.target.value;
-      if (state.currentCategory === 'music') {
-        loadReleases();
-      }
-    }, 350);
+      loadReleases();
+    }, 300);
   }
 
   // ============================================================================
-  // Punto #8: Escáner "1-Tap Lens" & Cero Basura en Base de Datos
+  // Escáner "1-Tap Lens" Polimórfico (Música + Libros ISBN + Videojuegos)
   // ============================================================================
   function openScannerModal() {
     if (!state.token) {
@@ -823,14 +963,12 @@
     startCamera();
   }
 
-  // 1-Tap Lens: Captura de cámara y envío automático inmediato a IA
   function captureFromCamera() {
     const video = document.getElementById('cameraVideo');
     const canvas = document.getElementById('cameraCanvas');
     if (!video || !canvas) return;
 
     if (!video.videoWidth || !video.videoHeight) {
-      // Si en escritorio no hay webcam activa, abrir selector de galería directamente
       const fileInput = document.getElementById('fileUploadInput');
       if (fileInput) fileInput.click();
       return;
@@ -850,7 +988,6 @@
     }, 'image/jpeg', 0.92);
   }
 
-  // 1-Tap Lens: Selección de galería y envío automático inmediato a IA
   function handleFileSelect(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -907,17 +1044,22 @@
       if (loadingState) loadingState.style.display = 'flex';
       if (errorState) errorState.style.display = 'none';
       if (aiTitle) aiTitle.textContent = 'Analizando Soporte Físico...';
-      if (aiSubtitle) aiSubtitle.textContent = 'Fase 1: Buscando código EAN/UPC con ZXing.Net (~2 ms)...';
+      if (aiSubtitle) aiSubtitle.textContent = 'Fase 1: Buscando código EAN / ISBN con ZXing.Net (~2 ms)...';
     }
 
     const phaseTimer = setTimeout(() => {
       if (aiTitle) aiTitle.textContent = 'Inferencia Visual Multimodal';
-      if (aiSubtitle) aiSubtitle.textContent = 'Fase 2: Identificando portada con Gemini Flash & Catálogo...';
+      if (aiSubtitle) aiSubtitle.textContent = 'Fase 2: Identificando cubierta con Gemini Flash & Catálogo Oficial...';
     }, 450);
 
+    const defaultFormat = state.currentCategory === 'books'
+      ? 'Paperback'
+      : state.currentCategory === 'games'
+        ? 'OpticalDiscGame'
+        : 'Vinyl';
     const formData = new FormData();
     formData.append('file', state.selectedScanBlob, state.selectedScanFileName || 'scan.jpg');
-    formData.append('format', 'Vinyl');
+    formData.append('format', defaultFormat);
 
     try {
       const result = await apiFetch('/api/releases/scan', {
@@ -927,10 +1069,11 @@
 
       clearTimeout(phaseTimer);
 
-      // Si el backend no pudo identificar el soporte (Failed), NO se guarda basura en BD y mostramos opción de repetir o alta manual
       const isUnrecognized = !result ||
         result.status === 'Failed' ||
-        result.title === 'Lanzamiento pendiente de identificación';
+        result.title === 'Lanzamiento pendiente de identificación' ||
+        result.title === 'Libro pendiente de identificación' ||
+        result.title === 'Videojuego pendiente de identificación';
 
       if (isUnrecognized) {
         if (loadingState) loadingState.style.display = 'none';
@@ -941,11 +1084,25 @@
         return;
       }
 
-      showToast('Soporte Identificado', `Detectado: "${result.title}" de ${result.artist}`, 'success');
+      const detectedCategoryKey = getReleaseCategoryKey(result);
+      if (detectedCategoryKey !== state.currentCategory) {
+        setCategory(detectedCategoryKey);
+      }
+
+      const toastTitle = detectedCategoryKey === 'books'
+        ? '📚 Libro Identificado'
+        : detectedCategoryKey === 'games'
+          ? '🎮 Videojuego Identificado'
+          : '🎵 Soporte Identificado';
+
+      showToast(
+        toastTitle,
+        `Detectado: "${result.title}" de ${result.artist}`,
+        'success'
+      );
       closeScannerModal();
       await refreshAll();
 
-      // Abrir automáticamente el Bottom Sheet de Estado de Conservación en 1-toque
       if (result.id) {
         openConfirmModal(result.id);
       }
@@ -960,7 +1117,7 @@
   }
 
   // ============================================================================
-  // Punto #7: Alta Manual Contextual según Categoría Activa (Música / Libros / Juegos)
+  // Alta Manual Contextual según Categoría Activa (Música / Libros / Juegos)
   // ============================================================================
   function openCreateModal() {
     if (!state.token) {
@@ -985,6 +1142,8 @@
     const inpCatNo = document.getElementById('createCatalogNumber');
     const lblLabel = document.getElementById('labelCreateLabel');
     const inpLabel = document.getElementById('createLabel');
+    const bookFields = document.getElementById('bookSpecificFields');
+    const gameFields = document.getElementById('gameSpecificFields');
 
     if (cat === 'books') {
       if (modalTitle) modalTitle.textContent = '📚 Alta Manual — Libro / Cómic';
@@ -995,30 +1154,33 @@
       if (lblFormat) lblFormat.innerHTML = 'Encuadernación / Formato <span class="required">*</span>';
       if (selFormat) {
         selFormat.innerHTML = `
-          <option value="BoxSet">Tapa Dura (Cartoné)</option>
-          <option value="CD">Rústica / Bolsillo</option>
-          <option value="Vinyl">Edición Especial / Gran Formato</option>
+          <option value="Hardcover">Tapa Dura (Cartoné)</option>
+          <option value="Paperback">Rústica / Bolsillo</option>
+          <option value="ComicManga">Cómic / Novela Gráfica / Manga</option>
+          <option value="BookSpecialEdition">Edición Especial / Coleccionista</option>
         `;
       }
       if (lblBarcode) lblBarcode.textContent = 'Código ISBN-13 / EAN (978 / 979)';
       if (inpBarcode) inpBarcode.placeholder = 'Ej. 9788497594257';
-      if (lblCatNo) lblCatNo.textContent = 'Colección / Serie Editorial';
-      if (inpCatNo) inpCatNo.placeholder = 'Ej. Nova Ciencia Ficción #12';
+      if (lblCatNo) lblCatNo.textContent = 'ISBN-10 / Colección Editorial';
+      if (inpCatNo) inpCatNo.placeholder = 'Ej. 8497594258 o Nova #12';
       if (lblLabel) lblLabel.textContent = 'Editorial';
       if (inpLabel) inpLabel.placeholder = 'Ej. Minotauro, Debolsillo';
-      toggleFormatFields('CD');
+      if (bookFields) bookFields.style.display = 'grid';
+      if (gameFields) gameFields.style.display = 'none';
+      toggleFormatFields('Hardcover');
     } else if (cat === 'games') {
       if (modalTitle) modalTitle.textContent = '🎮 Alta Manual — Videojuego Físico';
       if (lblArtist) lblArtist.innerHTML = 'Estudio / Desarrollador <span class="required">*</span>';
       if (inpArtist) inpArtist.placeholder = 'Ej. FromSoftware, Nintendo EPD';
       if (lblTitle) lblTitle.innerHTML = 'Título del Videojuego <span class="required">*</span>';
-      if (inpTitle) inpTitle.placeholder = 'Ej. Bloodborne, Zelda: Breath of the Wild';
-      if (lblFormat) lblFormat.innerHTML = 'Soporte / Plataforma <span class="required">*</span>';
+      if (inpTitle) inpTitle.placeholder = 'Ej. Bloodborne, Zelda: Ocarina of Time';
+      if (lblFormat) lblFormat.innerHTML = 'Soporte Físico <span class="required">*</span>';
       if (selFormat) {
         selFormat.innerHTML = `
-          <option value="CD">Disco Óptico (Blu-ray / DVD / CD-ROM)</option>
-          <option value="Cassette">Cartucho / Tarjeta Física</option>
-          <option value="BoxSet">Edición Coleccionista (Caja Grande)</option>
+          <option value="OpticalDiscGame">Disco Óptico (Blu-ray / DVD / CD-ROM)</option>
+          <option value="Cartridge">Cartucho / Tarjeta Física</option>
+          <option value="GameCollectorEdition">Edición Coleccionista (Caja Grande)</option>
         `;
       }
       if (lblBarcode) lblBarcode.textContent = 'Código de Barras (EAN / UPC)';
@@ -1027,7 +1189,9 @@
       if (inpCatNo) inpCatNo.placeholder = 'Ej. CUSA-00207 / PAL-ESP';
       if (lblLabel) lblLabel.textContent = 'Publisher / Distribuidora';
       if (inpLabel) inpLabel.placeholder = 'Ej. Sony Interactive, Nintendo';
-      toggleFormatFields('CD');
+      if (bookFields) bookFields.style.display = 'none';
+      if (gameFields) gameFields.style.display = 'grid';
+      toggleFormatFields('OpticalDiscGame');
     } else {
       if (modalTitle) modalTitle.textContent = '🎵 Alta Manual — Música';
       if (lblArtist) lblArtist.innerHTML = 'Artista / Grupo <span class="required">*</span>';
@@ -1049,6 +1213,8 @@
       if (inpCatNo) inpCatNo.placeholder = 'Ej. SHVL 804';
       if (lblLabel) lblLabel.textContent = 'Sello Discográfico';
       if (inpLabel) inpLabel.placeholder = 'Ej. Harvest / EMI';
+      if (bookFields) bookFields.style.display = 'none';
+      if (gameFields) gameFields.style.display = 'none';
       toggleFormatFields('Vinyl');
     }
 
@@ -1074,12 +1240,25 @@
     const title = document.getElementById('createTitle').value.trim();
     const format = document.getElementById('createFormat').value;
     const yearVal = document.getElementById('createYear').value;
-    const barcode = document.getElementById('createBarcode').value.trim() || null;
-    const catalogueNumber = document.getElementById('createCatalogNumber').value.trim() || null;
+    let barcode = document.getElementById('createBarcode').value.trim() || null;
+    let catalogueNumber = document.getElementById('createCatalogNumber').value.trim() || null;
     const label = document.getElementById('createLabel').value.trim() || null;
     const country = document.getElementById('createCountry').value.trim() || null;
     const coverImageUrl = document.getElementById('createCoverUrl').value.trim() || null;
     const notes = document.getElementById('createNotes').value.trim() || null;
+    const pagesInput = document.getElementById('createPagesCount');
+    const pagesVal = pagesInput ? pagesInput.value : '';
+    const platformInput = document.getElementById('createPlatform');
+    const platformVal = (platformInput && state.currentCategory === 'games') ? platformInput.value.trim() : '';
+
+    // Si en Libros el usuario escribió un ISBN-10 en el campo Barcode, lo pasamos a catalogueNumber para no fallar el checksum EAN-13
+    if (barcode) {
+      const cleanDigits = barcode.replace(/[\s-]/g, '');
+      if (cleanDigits.length === 10 && !catalogueNumber) {
+        catalogueNumber = barcode;
+        barcode = null;
+      }
+    }
 
     let vinylSize = null;
     let vinylSpeed = null;
@@ -1101,7 +1280,9 @@
       notes,
       vinylSize,
       vinylSpeed,
-      discsCount: 1
+      discsCount: 1,
+      pagesCount: (pagesVal && parseInt(pagesVal, 10) > 0) ? parseInt(pagesVal, 10) : null,
+      platform: platformVal || null
     };
 
     try {
@@ -1112,7 +1293,9 @@
 
       showToast('Guardado en Bóveda', `"${created.title}" se ha añadido a tu colección.`, 'success');
       closeCreateModal();
-      setCategory('music');
+
+      const targetCategory = getReleaseCategoryKey(created);
+      setCategory(targetCategory);
       await refreshAll();
     } catch (err) {
       showToast('Error de Validación', err.message, 'error');
@@ -1120,7 +1303,7 @@
   }
 
   // ============================================================================
-  // Punto #10: Modal de Detalle con Fondo Atmosférico (Contraportada / Portada) & Eliminar
+  // Modal de Detalle Polimórfico (Música con Tracklist / Libros con Ficha ISBN)
   // ============================================================================
   async function openDetailModal(id) {
     const modal = document.getElementById('detailModal');
@@ -1139,17 +1322,17 @@
 
     try {
       const release = await apiFetch(`/api/releases/${id}`);
+      const isBook = isBookRelease(release);
+      const isGame = isGameRelease(release);
       headerTitle.textContent = `${release.artist} — ${release.title}`;
 
-      // 1. Fondo atmosférico inicial con portada difuminada (para música sin contraportada, libros y videojuegos)
       if (backdropArt && release.coverImageUrl) {
         backdropArt.style.backgroundImage = `url('${encodeURI(release.coverImageUrl)}')`;
         backdropArt.classList.add('active');
       }
 
-      // 2. Si tiene ID de Discogs, consultar asíncronamente si existe imagen secundaria (contraportada real)
       const discogsId = release.discogsReleaseId || release.discogsId;
-      if (discogsId && backdropArt) {
+      if (!isBook && !isGame && discogsId && backdropArt) {
         apiFetch(`/api/discogs/releases/${discogsId}/artwork`)
           .then(art => {
             if (art && art.backCoverImageUrl) {
@@ -1165,42 +1348,115 @@
       }
 
       const shortCond = getGoldmineShortCode(release.mediaCondition);
-      const tracksHtml = (release.tracks && release.tracks.length > 0)
-        ? `
-          <div class="tracks-table-container">
-            <table class="tracks-table">
-              <thead>
-                <tr>
-                  <th class="track-pos">#</th>
-                  <th>Título de la Pista</th>
-                  <th class="track-dur">Duración</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${release.tracks.map(t => `
-                  <tr>
-                    <td class="track-pos">${escapeHtml(t.position)}</td>
-                    <td>${escapeHtml(t.title)}</td>
-                    <td class="track-dur">${escapeHtml(t.duration || '--:--')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+      const shortSleeve = getGoldmineShortCode(release.sleeveCondition);
+
+      let bottomSectionHtml = '';
+      if (isBook) {
+        const openLibRef = release.externalCatalogId
+          ? `<a href="https://openlibrary.org/books/${encodeURIComponent(release.externalCatalogId)}" target="_blank" rel="noopener" style="color: var(--accent-cyan);">${escapeHtml(release.externalCatalogId)} ↗</a>`
+          : 'Sin vincular (usa el botón Catálogo)';
+
+        bottomSectionHtml = `
+          <div style="margin-top: 0.75rem; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.9rem 1rem;">
+            <h4 style="font-size: 0.92rem; color: var(--accent-gold); margin-bottom: 0.55rem;">📖 Especificaciones Bibliográficas</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.5rem; font-size: 0.83rem; color: var(--text-secondary);">
+              <div><strong>Encuadernación:</strong> ${escapeHtml(getFormatDisplayLabel(release.format))}</div>
+              <div><strong>Páginas:</strong> ${release.pagesCount ? `${release.pagesCount} págs.` : 'N/D'}</div>
+              <div><strong>Bloque Interior:</strong> ${shortCond ? `${shortCond} (${release.mediaCondition})` : 'Sin calificar'}</div>
+              <div><strong>Cubierta / Lomo:</strong> ${shortSleeve ? `${shortSleeve} (${release.sleeveCondition})` : 'Sin calificar'}</div>
+              <div style="grid-column: 1 / -1;"><strong>Referencia OpenLibrary:</strong> ${openLibRef}</div>
+            </div>
           </div>
+        `;
+      } else if (isGame) {
+        bottomSectionHtml = `
+          <div style="margin-top: 0.75rem; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.9rem 1rem;">
+            <h4 style="font-size: 0.92rem; color: var(--accent-cyan); margin-bottom: 0.55rem;">🕹️ Especificaciones CIB &amp; Plataforma</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.5rem; font-size: 0.83rem; color: var(--text-secondary);">
+              <div><strong>Consola / Sistema:</strong> ${escapeHtml(release.platform || 'No especificada')}</div>
+              <div><strong>Soporte Físico:</strong> ${escapeHtml(getFormatDisplayLabel(release.format))}</div>
+              <div><strong>Disco / Cartucho:</strong> ${shortCond ? `${shortCond} (${release.mediaCondition})` : 'Sin calificar'}</div>
+              <div><strong>Caja y Manual (CIB):</strong> ${shortSleeve ? `${shortSleeve} (${release.sleeveCondition})` : 'Sin calificar'}</div>
+              <div style="grid-column: 1 / -1;"><strong>Referencia Catálogo:</strong> ${escapeHtml(release.externalCatalogId || 'Sin vincular (usa el botón Catálogo)')}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        const tracksHtml = (release.tracks && release.tracks.length > 0)
+          ? `
+            <div class="tracks-table-container">
+              <table class="tracks-table">
+                <thead>
+                  <tr>
+                    <th class="track-pos">#</th>
+                    <th>Título de la Pista</th>
+                    <th class="track-dur">Duración</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${release.tracks.map(t => `
+                    <tr>
+                      <td class="track-pos">${escapeHtml(t.position)}</td>
+                      <td>${escapeHtml(t.title)}</td>
+                      <td class="track-dur">${escapeHtml(t.formattedDuration || t.duration || '--:--')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `
+          : '<p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No hay pistas registradas todavía. Usa "Catálogo" para importar el tracklist y contraportada oficial.</p>';
+
+        bottomSectionHtml = `
+          <div style="margin-top: 0.5rem;">
+            <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.65rem;">Lista de Pistas Oficial (${release.tracks ? release.tracks.length : 0})</h4>
+            ${tracksHtml}
+          </div>
+        `;
+      }
+
+      const metaGridHtml = isBook
+        ? `
+          <div><strong>Año Publicación:</strong> ${release.releaseYear || 'Desconocido'}</div>
+          <div><strong>Editorial:</strong> ${escapeHtml(release.label || 'N/D')}</div>
+          <div><strong>Páginas:</strong> ${release.pagesCount ? `${release.pagesCount} págs.` : 'N/D'}</div>
+          <div><strong>ISBN / Serie:</strong> ${escapeHtml(release.catalogueNumber || 'N/D')}</div>
+          <div><strong>ISBN-13 / EAN:</strong> ${escapeHtml(release.barcode || 'N/D')}</div>
+          <div><strong>País / Idioma:</strong> ${escapeHtml(release.country || 'N/D')}</div>
         `
-        : '<p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No hay pistas registradas todavía. Usa "Buscar en Catálogo" para importar el tracklist y contraportada oficial.</p>';
+        : isGame
+          ? `
+            <div><strong>Plataforma:</strong> ${escapeHtml(release.platform || 'N/D')}</div>
+            <div><strong>Año Lanzamiento:</strong> ${release.releaseYear || 'Desconocido'}</div>
+            <div><strong>Publisher:</strong> ${escapeHtml(release.label || 'N/D')}</div>
+            <div><strong>Serial / Código:</strong> ${escapeHtml(release.catalogueNumber || 'N/D')}</div>
+            <div><strong>Código EAN:</strong> ${escapeHtml(release.barcode || 'N/D')}</div>
+            <div><strong>Región:</strong> ${escapeHtml(release.country || 'N/D')}</div>
+          `
+          : `
+            <div><strong>Año:</strong> ${release.releaseYear || 'Desconocido'}</div>
+            <div><strong>Sello:</strong> ${escapeHtml(release.label || 'N/D')}</div>
+            <div><strong>País:</strong> ${escapeHtml(release.country || 'N/D')}</div>
+            <div><strong>Catálogo:</strong> ${escapeHtml(release.catalogueNumber || 'N/D')}</div>
+            <div><strong>Código EAN:</strong> ${escapeHtml(release.barcode || 'N/D')}</div>
+            <div><strong>Ref. Oficial:</strong> ${discogsId ? `<a href="https://www.discogs.com/release/${discogsId}" target="_blank" rel="noopener" style="color: var(--accent-cyan);">#${discogsId} ↗</a>` : 'Sin vincular'}</div>
+          `;
+
+      const detailCoverWidth = isBook ? '122px' : isGame ? '132px' : '145px';
+      const detailCoverHeight = isBook ? '183px' : isGame ? '176px' : '145px';
 
       body.innerHTML = `
         <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
-          <div style="width: 140px; height: 140px; flex-shrink: 0; border-radius: var(--radius-md); overflow: hidden; background: #000; box-shadow: 0 8px 24px rgba(0,0,0,0.65);">
+          <div style="width: ${detailCoverWidth}; height: ${detailCoverHeight}; flex-shrink: 0; border-radius: var(--radius-md); overflow: hidden; background: #000; box-shadow: 0 8px 24px rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);">
             ${release.coverImageUrl
-              ? `<img src="${escapeHtml(release.coverImageUrl)}" alt="Portada" style="width: 100%; height: 100%; object-fit: cover;">`
+              ? `<img src="${escapeHtml(release.coverImageUrl)}" alt="Portada" style="width: 100%; height: 100%; object-fit: cover;" onerror="if(this.src.includes('library_600x900.jpg')){this.src=this.src.replace('shared.akamai.steamstatic.com/store_item_assets/steam/apps/','cdn.akamai.steamstatic.com/steam/apps/').replace('library_600x900.jpg','header.jpg');}">`
               : getPlaceholderGroovesHtml(release.format)
             }
           </div>
           <div style="flex: 1; min-width: 200px;">
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.4rem;">
-              <span class="format-badge ${release.format.toLowerCase()}">${escapeHtml(release.format)}</span>
+              <span class="format-badge ${release.format.toLowerCase()}">${escapeHtml(getFormatDisplayLabel(release.format))}</span>
+              ${(isGame && release.platform) ? `<span class="format-badge" style="background: rgba(56,189,248,0.2); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.4);">🎮 ${escapeHtml(release.platform)}</span>` : ''}
               <span class="status-badge ${release.status.toLowerCase()}">${escapeHtml(release.status)}</span>
               ${shortCond ? `<span class="condition-pill" title="Conservación: ${escapeHtml(release.mediaCondition)}">🏅 ${escapeHtml(shortCond)} (${escapeHtml(release.mediaCondition)})</span>` : ''}
               <span id="detailBackCoverBadgeSlot"></span>
@@ -1209,12 +1465,7 @@
             <div style="font-size: 1rem; color: var(--accent-gold); font-weight: 600; margin-bottom: 0.6rem;">${escapeHtml(release.artist)}</div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.82rem; color: var(--text-secondary);">
-              <div><strong>Año:</strong> ${release.releaseYear || 'Desconocido'}</div>
-              <div><strong>Sello:</strong> ${escapeHtml(release.label || 'N/D')}</div>
-              <div><strong>País:</strong> ${escapeHtml(release.country || 'N/D')}</div>
-              <div><strong>Catálogo:</strong> ${escapeHtml(release.catalogueNumber || 'N/D')}</div>
-              <div><strong>Código EAN:</strong> ${escapeHtml(release.barcode || 'N/D')}</div>
-              <div><strong>Ref. Oficial:</strong> ${discogsId ? `<a href="https://www.discogs.com/release/${discogsId}" target="_blank" rel="noopener" style="color: var(--accent-cyan);">#${discogsId} ↗</a>` : 'Sin vincular'}</div>
+              ${metaGridHtml}
             </div>
           </div>
         </div>
@@ -1225,10 +1476,7 @@
           </div>
         ` : ''}
 
-        <div style="margin-top: 0.5rem;">
-          <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.65rem;">Lista de Pistas Oficial (${release.tracks ? release.tracks.length : 0})</h4>
-          ${tracksHtml}
-        </div>
+        ${bottomSectionHtml}
       `;
 
       footer.innerHTML = `
@@ -1266,7 +1514,7 @@
   }
 
   // ============================================================================
-  // Punto #8: Estado de Conservación Universal (Goldmine / Bibliográfica / CIB)
+  // Estado de Conservación Universal (Goldmine / Bibliográfica / CIB)
   // ============================================================================
   const GOLDMINE_DESCRIPTIONS = {
     media: {
@@ -1313,19 +1561,21 @@
 
   function openConfirmModal(releaseId) {
     document.getElementById('confirmReleaseId').value = releaseId;
-    const release = state.releases.find(r => r.id === releaseId);
+    const release = state.allReleases.find(r => r.id === releaseId) || state.releases.find(r => r.id === releaseId);
     const mediaGrade = (release && release.mediaCondition) ? release.mediaCondition : 'NearMint';
     const sleeveGrade = (release && release.sleeveCondition) ? release.sleeveCondition : 'NearMint';
 
-    // Adaptar insignia de estándar según categoría activa
+    const isBook = isBookRelease(release) || state.currentCategory === 'books';
+    const isGame = isGameRelease(release) || state.currentCategory === 'games';
+
     const badgeEl = document.getElementById('conservationStandardBadge');
     const lblMedia = document.getElementById('labelConfirmMedia');
     const lblSleeve = document.getElementById('labelConfirmSleeve');
-    if (state.currentCategory === 'books') {
+    if (isBook) {
       if (badgeEl) badgeEl.textContent = 'Escala Bibliográfica';
       if (lblMedia) lblMedia.textContent = 'Páginas e Interior (Bloque)';
       if (lblSleeve) lblSleeve.textContent = 'Cubierta, Lomo y Sobrecubierta';
-    } else if (state.currentCategory === 'games') {
+    } else if (isGame) {
       if (badgeEl) badgeEl.textContent = 'Conservación CIB';
       if (lblMedia) lblMedia.textContent = 'Disco Óptico / Cartucho';
       if (lblSleeve) lblSleeve.textContent = 'Caja Original y Manual';
@@ -1373,27 +1623,73 @@
   }
 
   // ============================================================================
-  // Punto #11: "Buscar en Catálogo Oficial" (Fix ID: undefined + Toggle Selection + Auto-Search)
+  // "Buscar en Catálogo Oficial" Polimórfico (Discogs para Música | OpenLibrary para Libros)
   // ============================================================================
   function openEnrichModal(releaseId) {
     document.getElementById('enrichReleaseId').value = releaseId;
     document.getElementById('enrichDiscogsId').value = '';
+    state.selectedBookEdition = null;
+    state.selectedGameEdition = null;
+    state.catalogSearchResults = [];
+
     const submitBtn = document.getElementById('btnSubmitEnrich');
     if (submitBtn) submitBtn.disabled = true;
 
     const resultsContainer = document.getElementById('enrichSearchResults');
     if (resultsContainer) resultsContainer.innerHTML = '';
 
-    const release = state.releases.find(r => r.id === releaseId);
+    const release = state.allReleases.find(r => r.id === releaseId) || state.releases.find(r => r.id === releaseId);
+    const isBook = isBookRelease(release);
+    const isGame = isGameRelease(release);
+    state.enrichCategory = isBook ? 'Books' : isGame ? 'VideoGames' : 'Music';
+
+    const sourceBadge = document.getElementById('catalogSourceBadge');
+    const searchLabel = document.getElementById('enrichSearchLabel');
+    const searchHelp = document.getElementById('enrichSearchHelp');
     const queryInput = document.getElementById('enrichSearchQuery');
+
+    if (isBook) {
+      if (sourceBadge) sourceBadge.textContent = 'Fuente: OpenLibrary';
+      if (searchLabel) searchLabel.textContent = 'Buscar Edición por Título, Autor o ISBN';
+      if (searchHelp) {
+        searchHelp.textContent = 'Toca una edición para seleccionarla (o vuelve a tocarla para desmarcarla). Al vincular se importará portada oficial, editorial, año, ISBN y número de páginas.';
+      }
+      if (queryInput) {
+        queryInput.placeholder = 'Ej. Isaac Asimov Fundación o 9788497594257...';
+      }
+    } else if (isGame) {
+      if (sourceBadge) sourceBadge.textContent = 'Fuente: Catálogo Gamer';
+      if (searchLabel) searchLabel.textContent = 'Buscar Videojuego por Título, Consola o Estudio';
+      if (searchHelp) {
+        searchHelp.textContent = 'Toca una edición para seleccionarla (o vuelve a tocarla para desmarcarla). Al vincular se importará carátula oficial, estudio, publisher, año y consola.';
+      }
+      if (queryInput) {
+        queryInput.placeholder = 'Ej. Bloodborne PlayStation 4 o Zelda Ocarina of Time...';
+      }
+    } else {
+      if (sourceBadge) sourceBadge.textContent = 'Fuente: Discogs';
+      if (searchLabel) searchLabel.textContent = 'Buscar Edición por Artista, Álbum, Sello o Catálogo';
+      if (searchHelp) {
+        searchHelp.textContent = 'Toca una edición para seleccionarla (o vuelve a tocarla para desmarcarla). Al vincular se importará portada oficial, sello y listado de pistas.';
+      }
+      if (queryInput) {
+        queryInput.placeholder = 'Ej. Pink Floyd Dark Side...';
+      }
+    }
+
     if (release && queryInput) {
-      queryInput.value = `${release.artist} ${release.title}`.trim();
+      if (isBook && release.barcode) {
+        queryInput.value = release.barcode;
+      } else if (isGame) {
+        queryInput.value = `${release.title} ${release.platform || ''}`.trim();
+      } else {
+        queryInput.value = `${release.artist} ${release.title}`.trim();
+      }
     }
 
     const modal = document.getElementById('enrichModal');
     if (modal) modal.classList.add('active');
 
-    // Ejecutar la búsqueda automáticamente al abrir el Bottom Sheet
     if (queryInput && queryInput.value.trim().length > 0) {
       searchDiscogsForEnrich();
     }
@@ -1404,25 +1700,29 @@
     if (modal) modal.classList.remove('active');
   }
 
-  function selectCatalogEdition(element, releaseId) {
+  function selectCatalogEdition(element, releaseIdOrKey) {
     const hiddenInput = document.getElementById('enrichDiscogsId');
     const submitBtn = document.getElementById('btnSubmitEnrich');
     if (!hiddenInput || !element) return;
 
     const alreadySelected = element.classList.contains('selected');
 
-    // Limpiar selección previa de todas las filas
     const allItems = document.querySelectorAll('#enrichSearchResults .catalog-result-item');
     allItems.forEach(item => item.classList.remove('selected'));
 
     if (alreadySelected) {
-      // Si ya estaba marcada, se desmarca
       hiddenInput.value = '';
+      state.selectedBookEdition = null;
+      state.selectedGameEdition = null;
       if (submitBtn) submitBtn.disabled = true;
     } else {
-      // Marcar la edición pulsada
       element.classList.add('selected');
-      hiddenInput.value = String(releaseId);
+      hiddenInput.value = String(releaseIdOrKey);
+      if (state.enrichCategory === 'Books') {
+        state.selectedBookEdition = state.catalogSearchResults.find(b => String(b.editionKey) === String(releaseIdOrKey)) || null;
+      } else if (state.enrichCategory === 'VideoGames') {
+        state.selectedGameEdition = state.catalogSearchResults.find(g => String(g.gameKey) === String(releaseIdOrKey)) || null;
+      }
       if (submitBtn) submitBtn.disabled = false;
     }
   }
@@ -1434,18 +1734,119 @@
     const submitBtn = document.getElementById('btnSubmitEnrich');
 
     if (hiddenInput) hiddenInput.value = '';
+    state.selectedBookEdition = null;
+    state.selectedGameEdition = null;
     if (submitBtn) submitBtn.disabled = true;
     if (!query) return;
 
+    const isBook = state.enrichCategory === 'Books';
+    const isGame = state.enrichCategory === 'VideoGames';
+    const sourceName = isBook ? 'OpenLibrary' : isGame ? 'Catálogo Gamer' : 'Discogs';
     resultsContainer.innerHTML = `
       <div style="font-size:0.84rem; color: var(--text-secondary); text-align: center; padding: 1.25rem;">
         <div class="spinner" style="display:inline-block; vertical-align: middle; margin-right:0.4rem;"></div>
-        Consultando ediciones en el catálogo oficial...
+        Consultando ediciones en ${sourceName}...
       </div>
     `;
 
     try {
+      if (isBook) {
+        const cleanDigits = query.replace(/[\s-]/g, '');
+        const isIsbnQuery = (cleanDigits.length === 13 || cleanDigits.length === 10) && /^\d+[0-9Xx]?$/.test(cleanDigits);
+        const endpoint = isIsbnQuery
+          ? `/api/books/search?isbn=${encodeURIComponent(cleanDigits)}`
+          : `/api/books/search?query=${encodeURIComponent(query)}`;
+
+        const results = await apiFetch(endpoint);
+        state.catalogSearchResults = results || [];
+
+        if (!results || results.length === 0) {
+          resultsContainer.innerHTML = `
+            <div style="font-size:0.84rem; color: var(--text-muted); text-align: center; padding: 1.25rem;">
+              No se encontraron ediciones en OpenLibrary para esta búsqueda. Prueba con Título y Autor.
+            </div>
+          `;
+          return;
+        }
+
+        resultsContainer.innerHTML = results.map(item => {
+          const editionKey = item.editionKey;
+          const thumbHtml = item.coverImageUrl
+            ? `<img src="${escapeHtml(item.coverImageUrl)}" alt="" class="catalog-result-thumb thumb-vertical" loading="lazy" onerror="this.outerHTML='<div class=\\'catalog-result-thumb thumb-vertical\\'>📚</div>'">`
+            : `<div class="catalog-result-thumb thumb-vertical">📚</div>`;
+
+          const authorAndTitle = item.author && item.author !== 'Autor desconocido'
+            ? `${item.author} — ${item.title}`
+            : item.title;
+
+          const metaParts = [
+            item.publishYear ? `${item.publishYear}` : null,
+            item.publisher || null,
+            item.pagesCount ? `${item.pagesCount} págs.` : null,
+            item.isbn ? `ISBN: ${item.isbn}` : null
+          ].filter(Boolean).join(' • ');
+
+          return `
+            <div class="catalog-result-item" data-release-id="${escapeHtml(editionKey)}" onclick="app.selectCatalogEdition(this, '${escapeHtml(editionKey)}')">
+              ${thumbHtml}
+              <div class="catalog-result-info">
+                <div class="catalog-result-title" title="${escapeHtml(authorAndTitle)}">${escapeHtml(authorAndTitle)}</div>
+                <div class="catalog-result-meta">${escapeHtml(metaParts || 'Edición bibliográfica registrada')}</div>
+                <span class="catalog-result-id-pill">OL: ${escapeHtml(editionKey)}</span>
+              </div>
+              <div class="catalog-check-indicator" aria-hidden="true">✓</div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      if (isGame) {
+        const results = await apiFetch(`/api/games/search?query=${encodeURIComponent(query)}`);
+        state.catalogSearchResults = results || [];
+
+        if (!results || results.length === 0) {
+          resultsContainer.innerHTML = `
+            <div style="font-size:0.84rem; color: var(--text-muted); text-align: center; padding: 1.25rem;">
+              No se encontraron videojuegos para esta búsqueda. Prueba escribiendo el título exacto en inglés o español.
+            </div>
+          `;
+          return;
+        }
+
+        resultsContainer.innerHTML = results.map(item => {
+          const gameKey = item.gameKey;
+          const thumbHtml = item.coverImageUrl
+            ? `<img src="${escapeHtml(item.coverImageUrl)}" alt="" class="catalog-result-thumb thumb-vertical" loading="lazy" onerror="if(this.src.includes('library_600x900.jpg')){this.src=this.src.replace('shared.akamai.steamstatic.com/store_item_assets/steam/apps/','cdn.akamai.steamstatic.com/steam/apps/').replace('library_600x900.jpg','header.jpg');return;}this.outerHTML='<div class=\\'catalog-result-thumb thumb-vertical\\'>🎮</div>'">`
+            : `<div class="catalog-result-thumb thumb-vertical">🎮</div>`;
+
+          const devAndTitle = item.developer && item.developer !== 'Estudio Oficial'
+            ? `${item.developer} — ${item.title}`
+            : item.title;
+
+          const metaParts = [
+            item.releaseYear ? `${item.releaseYear}` : null,
+            item.platform ? `🎮 ${item.platform}` : null,
+            item.publisher || null
+          ].filter(Boolean).join(' • ');
+
+          return `
+            <div class="catalog-result-item" data-release-id="${escapeHtml(gameKey)}" onclick="app.selectCatalogEdition(this, '${escapeHtml(gameKey)}')">
+              ${thumbHtml}
+              <div class="catalog-result-info">
+                <div class="catalog-result-title" title="${escapeHtml(devAndTitle)}">${escapeHtml(devAndTitle)}</div>
+                <div class="catalog-result-meta">${escapeHtml(metaParts || 'Edición oficial de videojuego')}</div>
+                <span class="catalog-result-id-pill">ID: ${escapeHtml(gameKey)}</span>
+              </div>
+              <div class="catalog-check-indicator" aria-hidden="true">✓</div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
       const results = await apiFetch(`/api/discogs/search?query=${encodeURIComponent(query)}`);
+      state.catalogSearchResults = results || [];
       if (!results || results.length === 0) {
         resultsContainer.innerHTML = `
           <div style="font-size:0.84rem; color: var(--text-muted); text-align: center; padding: 1.25rem;">
@@ -1456,7 +1857,6 @@
       }
 
       resultsContainer.innerHTML = results.map(item => {
-        // Fix del bug ID: undefined -> DiscogsSearchResultDto expone 'releaseId'
         const releaseId = item.releaseId ?? item.discogsReleaseId ?? item.id;
         const thumbHtml = item.coverThumbUrl
           ? `<img src="${escapeHtml(item.coverThumbUrl)}" alt="" class="catalog-result-thumb" loading="lazy" onerror="this.outerHTML='<div class=\\'catalog-result-thumb\\'>💿</div>'">`
@@ -1492,17 +1892,60 @@
 
   async function submitEnrich() {
     const releaseId = document.getElementById('enrichReleaseId').value;
-    const discogsIdVal = document.getElementById('enrichDiscogsId').value;
-    if (!discogsIdVal) {
+    const selectedIdVal = document.getElementById('enrichDiscogsId').value;
+    if (!selectedIdVal) {
       showToast('Selecciona una Edición', 'Toca una de las ediciones de la lista para vincularla.', 'error');
       return;
     }
 
-    const discogsReleaseId = parseInt(discogsIdVal, 10);
     const submitBtn = document.getElementById('btnSubmitEnrich');
     if (submitBtn) submitBtn.disabled = true;
 
     try {
+      if (state.enrichCategory === 'Books') {
+        const bookEd = state.selectedBookEdition || {};
+        await apiFetch(`/api/releases/${releaseId}/enrich-book`, {
+          method: 'POST',
+          body: JSON.stringify({
+            editionKey: selectedIdVal,
+            title: bookEd.title || null,
+            author: bookEd.author || null,
+            publisher: bookEd.publisher || null,
+            publishYear: bookEd.publishYear || null,
+            pagesCount: bookEd.pagesCount || null,
+            coverImageUrl: bookEd.coverImageUrl || null,
+            isbn: bookEd.isbn || null
+          })
+        });
+
+        showToast('📚 Edición Bibliográfica Vinculada', 'Portada oficial, editorial y páginas importadas desde OpenLibrary.', 'success');
+        closeEnrichModal();
+        await refreshAll();
+        return;
+      }
+
+      if (state.enrichCategory === 'VideoGames') {
+        const gameEd = state.selectedGameEdition || {};
+        await apiFetch(`/api/releases/${releaseId}/enrich-game`, {
+          method: 'POST',
+          body: JSON.stringify({
+            gameKey: selectedIdVal,
+            title: gameEd.title || null,
+            developer: gameEd.developer || null,
+            publisher: gameEd.publisher || null,
+            releaseYear: gameEd.releaseYear || null,
+            platform: gameEd.platform || null,
+            coverImageUrl: gameEd.coverImageUrl || null
+          })
+        });
+
+        showToast('🎮 Videojuego Vinculado', 'Carátula oficial, estudio y plataforma importados del catálogo.', 'success');
+        closeEnrichModal();
+        await refreshAll();
+        return;
+      }
+
+      const discogsReleaseId = parseInt(selectedIdVal, 10);
       await apiFetch(`/api/releases/${releaseId}/enrich`, {
         method: 'POST',
         body: JSON.stringify({ discogsReleaseId })
@@ -1518,10 +1961,10 @@
   }
 
   // ============================================================================
-  // Eliminación de Lanzamientos
+  // Eliminación de Ejemplares
   // ============================================================================
   async function deleteRelease(id) {
-    const release = state.releases.find(r => r.id === id);
+    const release = state.allReleases.find(r => r.id === id) || state.releases.find(r => r.id === id);
     const title = release ? `"${release.title}"` : 'este ejemplar';
     if (!confirm(`¿Estás seguro de que deseas eliminar ${title} de tu bóveda? Esta acción no se puede deshacer.`)) {
       return;

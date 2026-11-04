@@ -5,7 +5,7 @@ using PergamonLens.Domain.ValueObjects;
 namespace PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 
 /// <summary>
-/// Validador de reglas para la creación manual de un lanzamiento musical.
+/// Validador de reglas para la creación manual de un ejemplar físico.
 /// </summary>
 public sealed class CreateReleaseCommandValidator : AbstractValidator<CreateReleaseCommand>
 {
@@ -43,6 +43,12 @@ public sealed class CreateReleaseCommandValidator : AbstractValidator<CreateRele
             .Must(y => !y.HasValue || ReleaseYear.TryCreate(y.Value, out _, out _))
             .WithMessage("El año de lanzamiento está fuera del rango histórico permitido (1877 a la actualidad).");
 
+        When(x => x.PagesCount.HasValue, () =>
+        {
+            RuleFor(x => x.PagesCount!.Value)
+                .GreaterThanOrEqualTo(1).WithMessage("El número de páginas debe ser mayor o igual a 1.");
+        });
+
         When(x => x.Format == MediaFormat.Vinyl, () =>
         {
             RuleFor(x => x.VinylSize)
@@ -57,4 +63,3 @@ public sealed class CreateReleaseCommandValidator : AbstractValidator<CreateRele
         });
     }
 }
-

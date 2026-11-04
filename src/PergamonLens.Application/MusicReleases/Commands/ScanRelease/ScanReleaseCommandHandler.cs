@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PergamonLens.Application.Common.Interfaces;
@@ -13,7 +13,8 @@ using PergamonLens.Domain.ValueObjects;
 namespace PergamonLens.Application.MusicReleases.Commands.ScanRelease;
 
 /// <summary>
-/// Manejador del caso de uso de ingesta y escaneo visual mediante IA multimodal con enriquecimiento automático.
+/// Manejador del caso de uso de ingesta y escaneo visual mediante IA multimodal con enriquecimiento automático
+/// polimórfico (Música vía Discogs, Libros vía OpenLibrary y Videojuegos).
 /// </summary>
 public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseCommand, MusicReleaseDto>
 {
@@ -21,6 +22,8 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
     private readonly IMusicReleaseRepository _repository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDiscogsService _discogsService;
+    private readonly IBookCatalogService? _bookCatalogService;
+    private readonly IGameCatalogService? _gameCatalogService;
     private readonly ILogger<ScanReleaseCommandHandler> _logger;
 
     public ScanReleaseCommandHandler(
@@ -28,13 +31,17 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         IMusicReleaseRepository repository,
         ICurrentUserService currentUserService,
         IDiscogsService discogsService,
-        ILogger<ScanReleaseCommandHandler>? logger = null)
+        ILogger<ScanReleaseCommandHandler>? logger = null,
+        IBookCatalogService? bookCatalogService = null,
+        IGameCatalogService? gameCatalogService = null)
     {
         _visionService = visionService;
         _repository = repository;
         _currentUserService = currentUserService;
         _discogsService = discogsService;
         _logger = logger ?? NullLogger<ScanReleaseCommandHandler>.Instance;
+        _bookCatalogService = bookCatalogService;
+        _gameCatalogService = gameCatalogService;
     }
 
     public async Task<MusicReleaseDto> Handle(ScanReleaseCommand request, CancellationToken cancellationToken)
@@ -67,6 +74,41 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
             CatalogueNumber.TryCreate(extraction.DetectedCatalogueNumber, out var parsedCatNumber, out _))
         {
             catalogueNumber = parsedCatNumber;
+        }
+
+        var visionFormat = MediaFormatExtensions.ParseFromText(extraction.DetectedFormat);
+
+        bool isBook = MediaFormatExtensions.IsIsbn(barcode?.Value ?? extraction.DetectedBarcode)
+            || extraction.Category == PhysicalMediaCategory.Book
+            || visionFormat?.GetCategory() == MediaCategory.Books
+            || (extraction.Category == PhysicalMediaCategory.Unknown && request.Format.GetCategory() == MediaCategory.Books);
+
+        bool isVideoGame = !isBook && (
+            extraction.Category == PhysicalMediaCategory.VideoGame
+            || visionFormat?.GetCategory() == MediaCategory.VideoGames);
+
+        if (isBook)
+        {
+            return await HandleBookScanAsync(
+                userId,
+                request.Format,
+                extraction,
+                barcode,
+                catalogueNumber,
+                visionFormat,
+                cancellationToken);
+        }
+
+        if (isVideoGame)
+        {
+            return await HandleVideoGameScanAsync(
+                userId,
+                request.Format,
+                extraction,
+                barcode,
+                catalogueNumber,
+                visionFormat,
+                cancellationToken);
         }
 
         string title = !string.IsNullOrWhiteSpace(extraction.DetectedTitle)
@@ -224,5 +266,238 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
         }
 
         return release.ToDto();
+    }
+
+    private async Task<MusicReleaseDto> HandleBookScanAsync(
+        UserId userId,
+        MediaFormat requestedFormat,
+        VisionExtractionResult extraction,
+        Barcode? barcode,
+        CatalogueNumber? catalogueNumber,
+        MediaFormat? visionFormat,
+        CancellationToken cancellationToken)
+    {
+        BookCatalogSearchResult? bookMatch = null;
+        string? isbnCandidate = barcode?.Value ?? extraction.DetectedBarcode ?? catalogueNumber?.Value;
+
+        if (_bookCatalogService is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(isbnCandidate))
+            {
+                try
+                {
+                    _logger.LogInformation("Consultando catálogo OpenLibrary por ISBN {Isbn}...", isbnCandidate);
+                    bookMatch = await _bookCatalogService.LookupByIsbnAsync(isbnCandidate, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error no fatal al consultar OpenLibrary por ISBN {Isbn}", isbnCandidate);
+                }
+            }
+
+            if (bookMatch is null && !string.IsNullOrWhiteSpace(extraction.DetectedTitle))
+            {
+                try
+                {
+                    _logger.LogInformation("Consultando catálogo OpenLibrary por Autor/Título: '{Author}' - '{Title}'...",
+                        extraction.DetectedArtist, extraction.DetectedTitle);
+                    var results = await _bookCatalogService.SearchByQueryAsync(
+                        extraction.DetectedArtist ?? string.Empty,
+                        extraction.DetectedTitle,
+                        cancellationToken);
+                    bookMatch = results.FirstOrDefault();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error no fatal al consultar OpenLibrary para '{Title}'", extraction.DetectedTitle);
+                }
+            }
+        }
+
+        string title = bookMatch?.Title
+            ?? (!string.IsNullOrWhiteSpace(extraction.DetectedTitle) ? extraction.DetectedTitle.Trim() : "Libro pendiente de identificación");
+
+        string author = bookMatch?.Author
+            ?? (!string.IsNullOrWhiteSpace(extraction.DetectedArtist) ? extraction.DetectedArtist.Trim() : "Autor desconocido");
+
+        var bookFormatFromCatalog = MediaFormatExtensions.ParseFromText(bookMatch?.Format);
+        var resolvedFormat = bookFormatFromCatalog?.GetCategory() == MediaCategory.Books
+            ? bookFormatFromCatalog.Value
+            : visionFormat?.GetCategory() == MediaCategory.Books
+                ? visionFormat.Value
+                : requestedFormat.GetCategory() == MediaCategory.Books
+                    ? requestedFormat
+                    : MediaFormat.Paperback;
+
+        if (catalogueNumber is null && !string.IsNullOrWhiteSpace(bookMatch?.Isbn) &&
+            CatalogueNumber.TryCreate(bookMatch.Isbn, out var parsedIsbn, out _))
+        {
+            catalogueNumber = parsedIsbn;
+        }
+
+        var bookRelease = MusicRelease.CreateBook(
+            userId,
+            title,
+            author,
+            resolvedFormat,
+            isbn13: barcode,
+            isbn10: catalogueNumber,
+            publisher: bookMatch?.Publisher ?? extraction.DetectedLabel,
+            pagesCount: bookMatch?.PagesCount,
+            coverImageUrl: bookMatch?.CoverImageUrl,
+            notes: $"Análisis visual IA de libro (confianza: {extraction.Confidence:P0}).",
+            externalCatalogId: bookMatch?.EditionKey);
+
+        if (bookMatch is not null)
+        {
+            ReleaseYear? pubYear = null;
+            if (bookMatch.PublishYear.HasValue && ReleaseYear.TryCreate(bookMatch.PublishYear.Value, out var parsedYear, out _))
+            {
+                pubYear = parsedYear;
+            }
+
+            bookRelease.EnrichFromBookCatalog(
+                bookMatch.EditionKey,
+                bookMatch.Title,
+                bookMatch.Author,
+                bookMatch.Publisher ?? extraction.DetectedLabel,
+                pubYear,
+                bookMatch.PagesCount,
+                bookMatch.CoverImageUrl,
+                catalogueNumber);
+        }
+        else if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle))
+        {
+            ReleaseYear? yearFromVision = null;
+            if (extraction.DetectedReleaseYear.HasValue &&
+                ReleaseYear.TryCreate(extraction.DetectedReleaseYear.Value, out var parsedYear, out _))
+            {
+                yearFromVision = parsedYear;
+            }
+
+            bookRelease.UpdateIdentifiedDetails(
+                title,
+                author,
+                barcode,
+                catalogueNumber,
+                releaseYear: yearFromVision,
+                label: extraction.DetectedLabel);
+        }
+        else
+        {
+            bookRelease.MarkAsFailed("No se pudo identificar el libro ni por ISBN ni por portada.");
+        }
+
+        if (bookRelease.Status != ProcessingStatus.Failed)
+        {
+            await _repository.AddAsync(bookRelease, cancellationToken);
+        }
+
+        return bookRelease.ToDto();
+    }
+
+    private async Task<MusicReleaseDto> HandleVideoGameScanAsync(
+        UserId userId,
+        MediaFormat requestedFormat,
+        VisionExtractionResult extraction,
+        Barcode? barcode,
+        CatalogueNumber? catalogueNumber,
+        MediaFormat? visionFormat,
+        CancellationToken cancellationToken)
+    {
+        GameCatalogSearchResult? gameMatch = null;
+        if (_gameCatalogService is not null && !string.IsNullOrWhiteSpace(extraction.DetectedTitle))
+        {
+            try
+            {
+                _logger.LogInformation("Consultando catálogo de videojuegos para '{Title}' ({Platform})...",
+                    extraction.DetectedTitle, extraction.DetectedPlatform);
+                var matches = await _gameCatalogService.SearchByQueryAsync(
+                    extraction.DetectedTitle,
+                    extraction.DetectedPlatform ?? extraction.DetectedArtist,
+                    cancellationToken);
+                gameMatch = matches.FirstOrDefault(m => !string.IsNullOrWhiteSpace(m.CoverImageUrl))
+                    ?? matches.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error no fatal al consultar catálogo de videojuegos para '{Title}'", extraction.DetectedTitle);
+            }
+        }
+
+        string title = gameMatch?.Title
+            ?? (!string.IsNullOrWhiteSpace(extraction.DetectedTitle) ? extraction.DetectedTitle.Trim() : "Videojuego pendiente de identificación");
+
+        string studio = gameMatch?.Developer
+            ?? (!string.IsNullOrWhiteSpace(extraction.DetectedArtist)
+                ? extraction.DetectedArtist.Trim()
+                : (!string.IsNullOrWhiteSpace(extraction.DetectedLabel) ? extraction.DetectedLabel.Trim() : "Estudio desconocido"));
+
+        var resolvedFormat = visionFormat?.GetCategory() == MediaCategory.VideoGames
+            ? visionFormat.Value
+            : requestedFormat.GetCategory() == MediaCategory.VideoGames
+                ? requestedFormat
+                : MediaFormat.OpticalDiscGame;
+
+        var gameRelease = MusicRelease.CreateVideoGame(
+            userId,
+            title,
+            studio,
+            resolvedFormat,
+            platform: extraction.DetectedPlatform ?? gameMatch?.Platform,
+            barcode: barcode,
+            productCode: catalogueNumber,
+            publisher: gameMatch?.Publisher ?? extraction.DetectedLabel,
+            coverImageUrl: gameMatch?.CoverImageUrl,
+            notes: $"Análisis visual IA de videojuego (confianza: {extraction.Confidence:P0}).",
+            externalCatalogId: gameMatch?.GameKey);
+
+        if (gameMatch is not null)
+        {
+            ReleaseYear? pubYear = null;
+            int? candidateYear = gameMatch.ReleaseYear ?? extraction.DetectedReleaseYear;
+            if (candidateYear.HasValue && ReleaseYear.TryCreate(candidateYear.Value, out var parsedYear, out _))
+            {
+                pubYear = parsedYear;
+            }
+
+            gameRelease.EnrichFromGameCatalog(
+                gameMatch.GameKey,
+                gameMatch.Title,
+                gameMatch.Developer,
+                gameMatch.Publisher ?? extraction.DetectedLabel,
+                pubYear,
+                extraction.DetectedPlatform ?? gameMatch.Platform,
+                gameMatch.CoverImageUrl);
+        }
+        else if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle))
+        {
+            ReleaseYear? yearFromVision = null;
+            if (extraction.DetectedReleaseYear.HasValue &&
+                ReleaseYear.TryCreate(extraction.DetectedReleaseYear.Value, out var parsedYear, out _))
+            {
+                yearFromVision = parsedYear;
+            }
+
+            gameRelease.UpdateIdentifiedDetails(
+                title,
+                studio,
+                barcode,
+                catalogueNumber,
+                releaseYear: yearFromVision,
+                label: extraction.DetectedLabel,
+                platform: extraction.DetectedPlatform);
+        }
+        else
+        {
+            gameRelease.MarkAsFailed("La IA visual no detectó metadatos legibles en la carátula del videojuego.");
+        }
+
+        if (gameRelease.Status != ProcessingStatus.Failed)
+        {
+            await _repository.AddAsync(gameRelease, cancellationToken);
+        }
+
+        return gameRelease.ToDto();
     }
 }

@@ -4,7 +4,9 @@ using PergamonLens.Application.DTOs;
 using PergamonLens.Application.MusicReleases.Commands.ConfirmRelease;
 using PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 using PergamonLens.Application.MusicReleases.Commands.DeleteRelease;
+using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromBookCatalog;
 using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromDiscogs;
+using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromGameCatalog;
 using PergamonLens.Application.MusicReleases.Commands.ScanRelease;
 using PergamonLens.Application.MusicReleases.Queries.GetCollection;
 using PergamonLens.Application.MusicReleases.Queries.GetReleaseById;
@@ -13,7 +15,7 @@ using PergamonLens.Domain.Enums;
 namespace PergamonLens.Web.Endpoints;
 
 /// <summary>
-/// Endpoints RESTful de Minimal APIs para la gestión del catálogo de lanzamientos musicales.
+/// Endpoints RESTful de Minimal APIs para la gestión del catálogo de ejemplares físicos (Música, Libros y Videojuegos).
 /// </summary>
 public static class MusicReleaseEndpoints
 {
@@ -32,7 +34,7 @@ public static class MusicReleaseEndpoints
             return Results.Created($"/api/releases/{result.Id}", result);
         })
         .WithName("CreateRelease")
-        .WithSummary("Crea manualmente un lanzamiento musical en la colección personal")
+        .WithSummary("Crea manualmente un ejemplar físico en la colección personal")
         .Produces<MusicReleaseDto>(StatusCodes.Status201Created)
         .ProducesValidationProblem()
         .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -65,7 +67,7 @@ public static class MusicReleaseEndpoints
         })
         .DisableAntiforgery()
         .WithName("ScanRelease")
-        .WithSummary("Ingiere y analiza una fotografía de álbum físico mediante IA multimodal")
+        .WithSummary("Ingiere y analiza una fotografía de soporte físico mediante IA multimodal")
         .Produces<MusicReleaseDto>(StatusCodes.Status200OK)
         .ProducesValidationProblem()
         .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -75,19 +77,21 @@ public static class MusicReleaseEndpoints
             [FromQuery] string? q,
             [FromQuery] MediaFormat? format,
             [FromQuery] ProcessingStatus? status,
+            [FromQuery] MediaCategory? category,
             ISender sender,
             CancellationToken ct) =>
         {
             var query = new GetCollectionQuery(
                 Format: format,
                 Status: status,
-                SearchQuery: q);
+                SearchQuery: q,
+                Category: category);
 
             var result = await sender.Send(query, ct);
             return Results.Ok(result);
         })
         .WithName("GetReleases")
-        .WithSummary("Obtiene los lanzamientos de la colección del usuario con filtros opcionales")
+        .WithSummary("Obtiene los ejemplares de la colección del usuario con filtros opcionales")
         .Produces<IReadOnlyList<MusicReleaseDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
@@ -103,11 +107,11 @@ public static class MusicReleaseEndpoints
                 {
                     Status = StatusCodes.Status404NotFound,
                     Title = "Lanzamiento no encontrado",
-                    Detail = $"No se encontró ningún lanzamiento musical con identificador '{id}' en su colección."
+                    Detail = $"No se encontró ningún lanzamiento con identificador '{id}' en su colección."
                 });
         })
         .WithName("GetReleaseById")
-        .WithSummary("Obtiene los detalles de un lanzamiento musical por su identificador")
+        .WithSummary("Obtiene los detalles de un ejemplar por su identificador")
         .Produces<MusicReleaseDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
@@ -128,7 +132,7 @@ public static class MusicReleaseEndpoints
             return Results.Ok(result);
         })
         .WithName("ConfirmRelease")
-        .WithSummary("Confirma y califica las condiciones físicas de conservación de un lanzamiento (Goldmine Grading)")
+        .WithSummary("Confirma y califica las condiciones físicas de conservación de un ejemplar")
         .Produces<MusicReleaseDto>(StatusCodes.Status200OK)
         .ProducesValidationProblem()
         .ProducesProblem(StatusCodes.Status404NotFound)
@@ -155,6 +159,57 @@ public static class MusicReleaseEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        group.MapPost("/{id:guid}/enrich-book", async (
+            Guid id,
+            [FromBody] EnrichBookReleaseRequest request,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var command = new EnrichReleaseFromBookCatalogCommand(
+                ReleaseId: id,
+                EditionKey: request.EditionKey,
+                Title: request.Title,
+                Author: request.Author,
+                Publisher: request.Publisher,
+                PublishYear: request.PublishYear,
+                PagesCount: request.PagesCount,
+                CoverImageUrl: request.CoverImageUrl,
+                Isbn: request.Isbn);
+
+            var result = await sender.Send(command, ct);
+            return Results.Ok(result);
+        })
+        .WithName("EnrichReleaseFromBookCatalog")
+        .WithSummary("Enriquece los metadatos bibliográficos de un libro desde OpenLibrary")
+        .Produces<MusicReleaseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/{id:guid}/enrich-game", async (
+            Guid id,
+            [FromBody] EnrichGameReleaseRequest request,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var command = new EnrichReleaseFromGameCatalogCommand(
+                ReleaseId: id,
+                GameKey: request.GameKey,
+                Title: request.Title,
+                Developer: request.Developer,
+                Publisher: request.Publisher,
+                ReleaseYear: request.ReleaseYear,
+                Platform: request.Platform,
+                CoverImageUrl: request.CoverImageUrl);
+
+            var result = await sender.Send(command, ct);
+            return Results.Ok(result);
+        })
+        .WithName("EnrichReleaseFromGameCatalog")
+        .WithSummary("Enriquece los metadatos de un videojuego físico desde el catálogo gamer")
+        .Produces<MusicReleaseDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         group.MapDelete("/{id:guid}", async (
             Guid id,
             ISender sender,
@@ -164,7 +219,7 @@ public static class MusicReleaseEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteRelease")
-        .WithSummary("Elimina un lanzamiento musical y sus pistas asociadas de la colección")
+        .WithSummary("Elimina un ejemplar de la colección")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
@@ -181,3 +236,21 @@ public sealed record ConfirmReleaseRequest(
 public sealed record EnrichReleaseRequest(
     long DiscogsReleaseId);
 
+public sealed record EnrichBookReleaseRequest(
+    string EditionKey,
+    string? Title = null,
+    string? Author = null,
+    string? Publisher = null,
+    int? PublishYear = null,
+    int? PagesCount = null,
+    string? CoverImageUrl = null,
+    string? Isbn = null);
+
+public sealed record EnrichGameReleaseRequest(
+    string GameKey,
+    string? Title = null,
+    string? Developer = null,
+    string? Publisher = null,
+    int? ReleaseYear = null,
+    string? Platform = null,
+    string? CoverImageUrl = null);

@@ -5,10 +5,10 @@ using PergamonLens.Domain.Enums;
 namespace PergamonLens.Application.MusicReleases.Queries.GetCollection;
 
 /// <summary>
-/// Consulta para listar lanzamientos de la colección con filtros opcionales de formato, estado o búsqueda textual.
+/// Consulta para listar ejemplares de la colección con filtros opcionales de categoría, formato, estado o búsqueda textual.
 /// </summary>
 public sealed record GetCollectionQuery(
     MediaFormat? Format = null,
     ProcessingStatus? Status = null,
-    string? SearchQuery = null) : IRequest<IReadOnlyList<MusicReleaseDto>>;
-
+    string? SearchQuery = null,
+    MediaCategory? Category = null) : IRequest<IReadOnlyList<MusicReleaseDto>>;

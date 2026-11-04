@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -7,7 +7,7 @@ using PergamonLens.Domain.ValueObjects;
 namespace PergamonLens.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// Implementación con Entity Framework Core del repositorio de lanzamientos musicales (<see cref="IMusicReleaseRepository"/>).
+/// Implementación con Entity Framework Core del repositorio de lanzamientos y ejemplares físicos (<see cref="IMusicReleaseRepository"/>).
 /// </summary>
 public sealed class MusicReleaseRepository : IMusicReleaseRepository
 {
@@ -70,6 +70,7 @@ public sealed class MusicReleaseRepository : IMusicReleaseRepository
                 r.Artist.Contains(normalized, StringComparison.OrdinalIgnoreCase) ||
                 (r.Label != null && r.Label.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.Country != null && r.Country.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
+                (r.Platform != null && r.Platform.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.Barcode != null && r.Barcode.Value.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.CatalogueNumber != null && r.CatalogueNumber.Value.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.ReleaseYear != null && r.ReleaseYear.Value.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)))

@@ -7,6 +7,8 @@ using PergamonLens.Domain.Services;
 using PergamonLens.Infrastructure.BackgroundServices;
 using PergamonLens.Infrastructure.BackgroundServices.ChannelQueue;
 using PergamonLens.Infrastructure.ExternalServices.Discogs;
+using PergamonLens.Infrastructure.ExternalServices.Games;
+using PergamonLens.Infrastructure.ExternalServices.OpenLibrary;
 using PergamonLens.Infrastructure.ExternalServices.Vision;
 using PergamonLens.Infrastructure.Persistence;
 using PergamonLens.Infrastructure.Persistence.Repositories;
@@ -52,6 +54,23 @@ public static class DependencyInjection
             {
                 client.DefaultRequestHeaders.Add("Authorization", $"Discogs token={options.Token}");
             }
+        })
+        .AddStandardResilienceHandler();
+
+        // 2b. Cliente HTTP Resiliente para OpenLibrary (Catálogo Oficial de Libros 0,00 €)
+        services.AddHttpClient<IBookCatalogService, OpenLibraryService>(client =>
+        {
+            client.BaseAddress = new Uri("https://openlibrary.org/");
+            client.DefaultRequestHeaders.Add("User-Agent", "PergamonLens/1.0 (https://github.com/dmaragongarrido/PergamonLens)");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .AddStandardResilienceHandler();
+
+        // 2c. Cliente HTTP Resiliente para Catálogo Oficial de Videojuegos (0,00 €)
+        services.AddHttpClient<IGameCatalogService, OpenGameCatalogService>(client =>
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", "PergamonLens/1.0 (https://github.com/dmaragongarrido/PergamonLens)");
+            client.Timeout = TimeSpan.FromSeconds(10);
         })
         .AddStandardResilienceHandler();
 

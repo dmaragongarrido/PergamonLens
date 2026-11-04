@@ -7,15 +7,16 @@ using PergamonLens.Domain.ValueObjects;
 namespace PergamonLens.Domain.Entities;
 
 /// <summary>
-/// Raíz de agregado (Aggregate Root) que representa un lanzamiento musical físico en la colección
-/// (Vinilo, CD, Casete o Box Set).
-/// Encapsula sus metadatos discográficos, formato físico, propietario (UserId), estado de conservación y lista de pistas.
+/// Raíz de agregado (Aggregate Root) que representa un ejemplar físico en la bóveda del coleccionista
+/// (Música: Vinilo, CD, Casete, Box Set | Libros: Tapa Dura, Rústica, Cómic | Videojuegos: Disco Óptico, Cartucho, Ed. Coleccionista).
+/// Encapsula sus metadatos, categoría, formato físico, propietario (UserId), estado de conservación y lista de pistas/contenidos.
 /// </summary>
 public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
 {
     private readonly List<Track> _tracks = [];
 
     public UserId UserId { get; private set; } = null!;
+    public MediaCategory Category { get; private set; } = MediaCategory.Music;
     public MediaFormat Format { get; private set; } = MediaFormat.Vinyl;
     public string Title { get; private set; } = string.Empty;
     public string Artist { get; private set; } = string.Empty;
@@ -32,7 +33,12 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     public VinylSize? VinylSize { get; private set; }
     public VinylSpeed? VinylSpeed { get; private set; }
 
-    // Graduación del estado de conservación (Goldmine standard)
+    // Atributos específicos para Libros y Videojuegos
+    public int? PagesCount { get; private set; }
+    public string? Platform { get; private set; }
+    public string? ExternalCatalogId { get; private set; }
+
+    // Graduación del estado de conservación (Goldmine / Bibliográfico / CIB)
     public MediaCondition? MediaCondition { get; private set; }
     public MediaCondition? SleeveCondition { get; private set; }
 
@@ -63,9 +69,13 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         string? coverImageUrl,
         string? notes,
         ProcessingStatus status,
-        DateTime createdAtUtc) : base(id)
+        DateTime createdAtUtc,
+        int? pagesCount = null,
+        string? platform = null,
+        string? externalCatalogId = null) : base(id)
     {
         UserId = userId;
+        Category = format.GetCategory();
         Format = format;
         Title = title;
         Artist = artist;
@@ -81,13 +91,16 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         Notes = notes;
         Status = status;
         CreatedAtUtc = createdAtUtc;
+        PagesCount = pagesCount;
+        Platform = platform;
+        ExternalCatalogId = externalCatalogId;
     }
 
     // Constructor privado requerido por EF Core
     private MusicRelease() { }
 
     /// <summary>
-    /// Crea una nueva instancia de lanzamiento musical asociada al usuario propietario.
+    /// Crea una nueva instancia de ejemplar físico asociada al usuario propietario.
     /// </summary>
     public static MusicRelease Create(
         UserId userId,
@@ -103,12 +116,20 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         string? label = null,
         string? country = null,
         string? coverImageUrl = null,
-        string? notes = null)
+        string? notes = null,
+        int? pagesCount = null,
+        string? platform = null,
+        string? externalCatalogId = null)
     {
         ArgumentNullException.ThrowIfNull(userId);
         ValidateTitle(title);
         ValidateArtist(artist);
         ValidateDiscsCount(discsCount);
+
+        if (pagesCount.HasValue && pagesCount.Value < 1)
+        {
+            throw new MusicReleaseDomainException("El número de páginas debe ser un valor positivo.");
+        }
 
         var id = MusicReleaseId.New();
         var now = DateTime.UtcNow;
@@ -134,7 +155,10 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
             coverImageUrl?.Trim(),
             notes?.Trim(),
             ProcessingStatus.PendingAnalysis,
-            now);
+            now,
+            pagesCount,
+            platform?.Trim(),
+            externalCatalogId?.Trim());
 
         release.AddDomainEvent(new MusicReleaseCreatedEvent(id, userId, release.Title, release.Artist, format, now));
 
@@ -243,6 +267,93 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
+    /// Factoría de conveniencia para la creación de un libro, cómic o manga.
+    /// </summary>
+    public static MusicRelease CreateBook(
+        UserId userId,
+        string title,
+        string author,
+        MediaFormat format = MediaFormat.Hardcover,
+        Barcode? isbn13 = null,
+        CatalogueNumber? isbn10 = null,
+        ReleaseYear? publishYear = null,
+        string? publisher = null,
+        int? pagesCount = null,
+        string? country = null,
+        string? coverImageUrl = null,
+        string? notes = null,
+        string? externalCatalogId = null)
+    {
+        if (format.GetCategory() != MediaCategory.Books)
+        {
+            format = MediaFormat.Hardcover;
+        }
+
+        return Create(
+            userId,
+            title,
+            author,
+            format,
+            isbn13,
+            isbn10,
+            publishYear,
+            discsCount: 1,
+            vinylSize: null,
+            vinylSpeed: null,
+            label: publisher,
+            country: country,
+            coverImageUrl: coverImageUrl,
+            notes: notes,
+            pagesCount: pagesCount,
+            platform: null,
+            externalCatalogId: externalCatalogId);
+    }
+
+    /// <summary>
+    /// Factoría de conveniencia para la creación de un videojuego físico.
+    /// </summary>
+    public static MusicRelease CreateVideoGame(
+        UserId userId,
+        string title,
+        string developerOrStudio,
+        MediaFormat format = MediaFormat.OpticalDiscGame,
+        string? platform = null,
+        Barcode? barcode = null,
+        CatalogueNumber? productCode = null,
+        ReleaseYear? releaseYear = null,
+        string? publisher = null,
+        int discsCount = 1,
+        string? regionOrCountry = null,
+        string? coverImageUrl = null,
+        string? notes = null,
+        string? externalCatalogId = null)
+    {
+        if (format.GetCategory() != MediaCategory.VideoGames)
+        {
+            format = MediaFormat.OpticalDiscGame;
+        }
+
+        return Create(
+            userId,
+            title,
+            developerOrStudio,
+            format,
+            barcode,
+            productCode,
+            releaseYear,
+            discsCount: discsCount,
+            vinylSize: null,
+            vinylSpeed: null,
+            label: publisher,
+            country: regionOrCountry,
+            coverImageUrl: coverImageUrl,
+            notes: notes,
+            pagesCount: null,
+            platform: platform,
+            externalCatalogId: externalCatalogId);
+    }
+
+    /// <summary>
     /// Actualiza los metadatos reconocidos tras la extracción visual con IA.
     /// </summary>
     public void UpdateIdentifiedDetails(
@@ -252,7 +363,9 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         CatalogueNumber? catalogueNumber = null,
         ReleaseYear? releaseYear = null,
         string? label = null,
-        string? country = null)
+        string? country = null,
+        int? pagesCount = null,
+        string? platform = null)
     {
         EnsureNotConfirmed();
         ValidateTitle(title);
@@ -265,6 +378,8 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
         ReleaseYear = releaseYear ?? ReleaseYear;
         Label = label?.Trim() ?? Label;
         Country = country?.Trim() ?? Country;
+        PagesCount = pagesCount ?? PagesCount;
+        Platform = platform?.Trim() ?? Platform;
 
         if (Status is ProcessingStatus.PendingAnalysis or ProcessingStatus.Failed)
         {
@@ -275,12 +390,13 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
-    /// Actualiza el formato físico del lanzamiento (ej. al identificarse como CD, Casete o Vinilo desde Discogs/IA).
+    /// Actualiza el formato físico del ejemplar y sincroniza su categoría principal.
     /// </summary>
     public void UpdateFormat(MediaFormat format)
     {
         EnsureNotConfirmed();
         Format = format;
+        Category = format.GetCategory();
         if (format != MediaFormat.Vinyl)
         {
             VinylSize = null;
@@ -290,7 +406,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
-    /// Enriquece el lanzamiento con información contrastada obtenida de la API canónica (ej. Discogs).
+    /// Enriquece el lanzamiento con información contrastada obtenida de la API canónica de Discogs.
     /// </summary>
     public void EnrichFromDiscogs(
         long discogsReleaseId,
@@ -329,7 +445,89 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
-    /// Valida y confirma el lanzamiento para su custodia en la colección personal del usuario.
+    /// Enriquece el ejemplar bibliográfico con información oficial del catálogo de libros (OpenLibrary).
+    /// </summary>
+    public void EnrichFromBookCatalog(
+        string editionKey,
+        string? title = null,
+        string? author = null,
+        string? publisher = null,
+        ReleaseYear? publishYear = null,
+        int? pagesCount = null,
+        string? coverImageUrl = null,
+        CatalogueNumber? isbn = null)
+    {
+        EnsureNotConfirmed();
+
+        if (string.IsNullOrWhiteSpace(editionKey))
+        {
+            throw new MusicReleaseDomainException("El identificador de edición bibliográfica no puede estar vacío.");
+        }
+
+        ExternalCatalogId = editionKey.Trim();
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            Title = title.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(author))
+        {
+            Artist = author.Trim();
+        }
+        Label = publisher?.Trim() ?? Label;
+        ReleaseYear = publishYear ?? ReleaseYear;
+        if (pagesCount.HasValue && pagesCount.Value > 0)
+        {
+            PagesCount = pagesCount.Value;
+        }
+        CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
+        CatalogueNumber = isbn ?? CatalogueNumber;
+
+        Status = ProcessingStatus.Enriched;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Enriquece el videojuego físico con información oficial del catálogo gamer.
+    /// </summary>
+    public void EnrichFromGameCatalog(
+        string gameKey,
+        string? title = null,
+        string? developer = null,
+        string? publisher = null,
+        ReleaseYear? releaseYear = null,
+        string? platform = null,
+        string? coverImageUrl = null)
+    {
+        EnsureNotConfirmed();
+
+        if (string.IsNullOrWhiteSpace(gameKey))
+        {
+            throw new MusicReleaseDomainException("El identificador de videojuego en catálogo no puede estar vacío.");
+        }
+
+        ExternalCatalogId = gameKey.Trim();
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            Title = title.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(developer))
+        {
+            Artist = developer.Trim();
+        }
+        Label = publisher?.Trim() ?? Label;
+        ReleaseYear = releaseYear ?? ReleaseYear;
+        if (!string.IsNullOrWhiteSpace(platform))
+        {
+            Platform = platform.Trim();
+        }
+        CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
+
+        Status = ProcessingStatus.Enriched;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Valida y confirma el ejemplar para su custodia en la colección personal del usuario.
     /// </summary>
     public void Confirm()
     {
@@ -359,7 +557,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
-    /// Asigna o actualiza la graduación del estado físico de conservación del soporte sonoro y su funda/caja.
+    /// Asigna o actualiza la graduación del estado físico de conservación del soporte y su funda/caja/cubierta.
     /// </summary>
     public void SetGrading(MediaCondition mediaCondition, MediaCondition sleeveCondition)
     {
@@ -387,7 +585,7 @@ public sealed class MusicRelease : AggregateRoot<MusicReleaseId>
     }
 
     /// <summary>
-    /// Actualiza el número de soportes (discos/casetes) incluidos en la edición.
+    /// Actualiza el número de soportes (discos/casetes/volúmenes) incluidos en la edición.
     /// </summary>
     public void SetDiscsCount(int discsCount)
     {

@@ -128,12 +128,12 @@
                 <button type="button" class="category-tab-btn" data-category="books" onclick="app.setCategory('books')">
                   <span class="category-tab-icon">📚</span>
                   <span class="category-tab-label">Libros</span>
-                  <span class="category-badge-soon">ISBN</span>
+                  <span class="category-tab-count" id="categoryBooksCount">0</span>
                 </button>
                 <button type="button" class="category-tab-btn" data-category="games" onclick="app.setCategory('games')">
                   <span class="category-tab-icon">🎮</span>
                   <span class="category-tab-label">Videojuegos</span>
-                  <span class="category-badge-soon">CIB</span>
+                  <span class="category-tab-count" id="categoryGamesCount">0</span>
                 </button>
               </div>
 
@@ -146,7 +146,7 @@
               </div>
             </section>
 
-            <!-- Filtros de Formato Físico (Música) -->
+            <!-- Filtros de Formato Físico (Dinámicos según categoría activa) -->
             <div class="filter-chips" id="formatFilters">
               <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
               <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
@@ -163,14 +163,14 @@
               <!-- Renderizado dinámico de tarjetas 100% visuales -->
             </section>
 
-            <!-- Polymorphic Category Coming Soon View (Books / Video Games) -->
+            <!-- Polymorphic Category Coming Soon View (Video Games en Subfase 8.2) -->
             <section id="categoryComingSoonView" class="polymorphic-coming-soon" style="display: none;">
               <div class="coming-soon-card">
-                <div class="coming-soon-icon" id="comingSoonIcon">📚</div>
-                <div class="coming-soon-badge" id="comingSoonBadge">Arquitectura Polimórfica Preparada</div>
-                <h3 id="comingSoonTitle">Bóveda Bibliográfica &amp; Bookland ISBN</h3>
+                <div class="coming-soon-icon" id="comingSoonIcon">🎮</div>
+                <div class="coming-soon-badge" id="comingSoonBadge">Conservación CIB (Caja, Manual y Soporte)</div>
+                <h3 id="comingSoonTitle">Bóveda de Videojuegos Físicos &amp; Retro</h3>
                 <p id="comingSoonDescription">
-                  El motor determinista ZXing.Net ya detecta prefijos internacionales Bookland (978 / 979). Muy pronto podrás catalogar primeras ediciones, tapa dura y bolsillo con enriquecimiento automático de editorial y autor.
+                  Diseñado para coleccionistas de ediciones físicas de consola y PC. Muy pronto activaremos la Subfase 8.2 con catálogo oficial de videojuegos.
                 </p>
                 <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
                   <button type="button" class="btn btn-primary" onclick="app.openCreateModal()">
@@ -236,14 +236,14 @@
                 <div class="metrics-poly-icon">📚</div>
                 <div class="metrics-poly-info">
                   <h4>Biblioteca &amp; Cómics (ISBN)</h4>
-                  <p>0 ejemplares registrados • Soporte EAN Bookland 978/979 preparado</p>
+                  <p id="metricsBooksSummary">0 ejemplares registrados • Catálogo OpenLibrary &amp; Bookland 978/979 activos</p>
                 </div>
               </div>
               <div class="metrics-poly-card">
                 <div class="metrics-poly-icon">🎮</div>
                 <div class="metrics-poly-info">
                   <h4>Videojuegos Físicos (CIB)</h4>
-                  <p>0 ediciones registradas • Graduación de caja, manual y soporte</p>
+                  <p id="metricsGamesSummary">0 ediciones registradas • Graduación de caja, manual y soporte</p>
                 </div>
               </div>
             </div>
@@ -335,7 +335,7 @@
                 </div>
               </div>
             </div>
-            <p class="scanner-hint-text">Apunta a la portada o al código de barras. Al disparar o elegir de galería se analizará al instante.</p>
+            <p class="scanner-hint-text">Apunta a la portada o al código de barras (EAN / ISBN). Al disparar o elegir de galería se analizará al instante.</p>
 
             <!-- Única barra limpia de 3 controles: Girar | Disparador 1-Tap | Galería -->
             <div class="scanner-controls">
@@ -364,7 +364,7 @@
                 <span class="scan-ai-icon">🏛️</span>
               </div>
               <h4 id="scanAiPhaseTitle">Analizando Soporte Físico...</h4>
-              <p id="scanAiPhaseSubtitle">Fase 1: Buscando código EAN/UPC con ZXing.Net (~2 ms)...</p>
+              <p id="scanAiPhaseSubtitle">Fase 1: Buscando código EAN / ISBN con ZXing.Net (~2 ms)...</p>
               <div class="scan-ai-progress-bar">
                 <div class="scan-ai-progress-fill"></div>
               </div>
@@ -430,7 +430,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label" id="labelCreateYear">Año de Lanzamiento</label>
-                <input type="number" id="createYear" class="form-input" min="1900" max="2100" placeholder="Ej. 1973">
+                <input type="number" id="createYear" class="form-input" min="1877" max="2100" placeholder="Ej. 1973">
               </div>
             </div>
 
@@ -438,9 +438,9 @@
               <div class="form-group">
                 <label class="form-label">Tamaño Vinilo</label>
                 <select id="createVinylSize" class="form-select">
-                  <option value="TwelveInch">12 Pulgadas (LP / Maxi)</option>
-                  <option value="SevenInch">7 Pulgadas (Single)</option>
-                  <option value="TenInch">10 Pulgadas (EP)</option>
+                  <option value="Inch12">12 Pulgadas (LP / Maxi)</option>
+                  <option value="Inch7">7 Pulgadas (Single)</option>
+                  <option value="Inch10">10 Pulgadas (EP)</option>
                 </select>
               </div>
               <div class="form-group">
@@ -450,6 +450,45 @@
                   <option value="Rpm45">45 RPM</option>
                   <option value="Rpm78">78 RPM</option>
                 </select>
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 1rem; display: none;" id="bookSpecificFields">
+              <div class="form-group">
+                <label class="form-label">Número de Páginas</label>
+                <input type="number" id="createPagesCount" class="form-input" min="1" max="20000" placeholder="Ej. 320">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Estándar de Catalogación</label>
+                <input type="text" class="form-input" disabled value="Bookland ISBN / OpenLibrary">
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 1rem; display: none;" id="gameSpecificFields">
+              <div class="form-group">
+                <label class="form-label">Plataforma / Consola</label>
+                <input type="text" id="createPlatform" list="platformSuggestions" class="form-input" placeholder="Ej. PlayStation 5, Nintendo Switch, SNES...">
+                <datalist id="platformSuggestions">
+                  <option value="PlayStation 5"></option>
+                  <option value="PlayStation 4"></option>
+                  <option value="PlayStation 3"></option>
+                  <option value="PlayStation 2"></option>
+                  <option value="PlayStation (PS1)"></option>
+                  <option value="Nintendo Switch"></option>
+                  <option value="Super Nintendo (SNES)"></option>
+                  <option value="Nintendo 64"></option>
+                  <option value="GameCube"></option>
+                  <option value="Game Boy / GBA"></option>
+                  <option value="Sega Mega Drive"></option>
+                  <option value="Dreamcast"></option>
+                  <option value="Xbox Series X"></option>
+                  <option value="Xbox 360"></option>
+                  <option value="PC Big Box / DVD"></option>
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Estándar de Conservación</label>
+                <input type="text" class="form-input" disabled value="CIB (Caja, Manual y Soporte)">
               </div>
             </div>
 
@@ -482,7 +521,7 @@
 
             <div class="form-group" style="margin-top: 1rem;">
               <label class="form-label">Notas Personales</label>
-              <textarea id="createNotes" class="form-textarea" placeholder="Detalles de compra, prensaje, inserciones, póster incluido..."></textarea>
+              <textarea id="createNotes" class="form-textarea" placeholder="Detalles de compra, edición, sobrecubierta, firma o inserciones..."></textarea>
             </div>
           </form>
         </div>
@@ -505,7 +544,7 @@
           <span></span>
         </div>
         <div class="modal-header" style="position: relative; z-index: 2;">
-          <h3 id="detailHeaderTitle">Detalle del Lanzamiento</h3>
+          <h3 id="detailHeaderTitle">Detalle del Ejemplar</h3>
           <button class="modal-close-btn" onclick="app.closeDetailModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
@@ -514,7 +553,7 @@
           <!-- Renderizado dinámico de ficha y tracklist -->
         </div>
         <div class="modal-footer" id="detailModalFooter" style="position: relative; z-index: 2;">
-          <!-- Acciones contextuales del lanzamiento (incluye Eliminar, Conservación y Catálogo) -->
+          <!-- Acciones contextuales del ejemplar (incluye Eliminar, Conservación y Catálogo) -->
         </div>
       </div>
     </div>
@@ -578,7 +617,7 @@
 
           <div class="form-group" style="margin-top: 0.75rem;">
             <label class="form-label">Notas de Custodia y Edición (Opcional)</label>
-            <textarea id="confirmNotes" class="form-textarea" style="min-height: 64px;" placeholder="Ej. Prensaje japonés original con OBI strip intacto..."></textarea>
+            <textarea id="confirmNotes" class="form-textarea" style="min-height: 64px;" placeholder="Ej. Primera edición con sobrecubierta intacta..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -609,13 +648,13 @@
           <input type="hidden" id="enrichDiscogsId">
 
           <div class="form-group">
-            <label class="form-label">Buscar Edición por Artista, Álbum, Sello o Catálogo</label>
+            <label class="form-label" id="enrichSearchLabel">Buscar Edición por Artista, Álbum, Sello o Catálogo</label>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
               <input type="text" id="enrichSearchQuery" class="form-input" placeholder="Ej. Pink Floyd Dark Side..." onkeydown="if(event.key==='Enter'){event.preventDefault();app.searchDiscogsForEnrich();}">
               <button type="button" class="btn btn-secondary" onclick="app.searchDiscogsForEnrich()">Buscar</button>
             </div>
-            <div class="form-help" style="margin-top: 0.35rem;">
-              Toca una edición para seleccionarla (o vuelve a tocarla para desmarcarla). Al vincular se importará portada oficial, sello y listado de pistas.
+            <div class="form-help" id="enrichSearchHelp" style="margin-top: 0.35rem;">
+              Toca una edición para seleccionarla (o vuelve a tocarla para desmarcarla). Al vincular se importará portada oficial y metadatos de la edición.
             </div>
           </div>
 

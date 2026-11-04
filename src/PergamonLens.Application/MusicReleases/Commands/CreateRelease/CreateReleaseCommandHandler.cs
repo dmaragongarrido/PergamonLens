@@ -9,7 +9,7 @@ using PergamonLens.Domain.ValueObjects;
 namespace PergamonLens.Application.MusicReleases.Commands.CreateRelease;
 
 /// <summary>
-/// Manejador del comando de creación de un lanzamiento musical.
+/// Manejador del comando de creación manual de un ejemplar físico.
 /// </summary>
 public sealed class CreateReleaseCommandHandler : IRequestHandler<CreateReleaseCommand, MusicReleaseDto>
 {
@@ -63,7 +63,9 @@ public sealed class CreateReleaseCommandHandler : IRequestHandler<CreateReleaseC
             request.Label,
             request.Country,
             request.CoverImageUrl,
-            request.Notes);
+            request.Notes,
+            request.PagesCount,
+            request.Platform);
 
         await _repository.AddAsync(release, cancellationToken);
 

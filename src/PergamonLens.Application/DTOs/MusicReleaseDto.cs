@@ -1,7 +1,7 @@
 namespace PergamonLens.Application.DTOs;
 
 /// <summary>
-/// DTO de lectura completo para un lanzamiento musical físico en la colección.
+/// DTO de lectura completo para un ejemplar físico en la bóveda (Música, Libro o Videojuego).
 /// </summary>
 public sealed record MusicReleaseDto(
     Guid Id,
@@ -25,4 +25,8 @@ public sealed record MusicReleaseDto(
     string? Notes,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc,
-    IReadOnlyList<TrackDto> Tracks);
+    IReadOnlyList<TrackDto> Tracks,
+    string Category = "Music",
+    int? PagesCount = null,
+    string? Platform = null,
+    string? ExternalCatalogId = null);
