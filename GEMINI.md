@@ -1,12 +1,12 @@
 # Contexto del Proyecto: PergamonLens (G)
 
-Este archivo se carga automáticamente en el contexto de G al abrir el espacio de trabajo `c:\source\PergamonLens`.
+Este archivo se carga automáticamente en el contexto del copiloto de IA al abrir el espacio de trabajo del proyecto.
 
 ---
 
 ## 🏛️ Identidad y Misión del Proyecto
 - **Proyecto:** **PergamonLens** (Catálogo visual para coleccionistas de vinilos, libros y videojuegos con IA multimodal).
-- **Desarrollador:** **Diego M. Aragón Garrido** (Senior Software Engineer, +20 años de experiencia en .NET/C#).
+- **Desarrollador:** **Diego M.** (Lead Developer / Senior Software Engineer).
 - **Copiloto IA:** **G** (Pair programmer, estratega técnico y arquitecto de software).
 - **Objetivo:** Construir una pieza de ingeniería de autor en GitHub que sirva como escaparate técnico irrefutable de arquitectura limpia, concurrencia avanzada, resiliencia y .NET moderno (.NET 10 / C#).
 
@@ -46,5 +46,5 @@ Al comenzar una nueva conversación y durante todo el desarrollo en este workspa
 2. **Resumen proactivo:** En tu primer saludo o respuesta, recuerda de forma breve y concisa:
    - En qué hito técnico exacto nos quedamos.
    - Cuál es la siguiente acción inmediata recomendada de desarrollo.
-3. **Narración Paso a Paso en Tiempo Real (Obligatorio):** Antes de ejecutar herramientas (lectura/edición de archivos, comandos, tests), informa siempre a Diego con un mensaje breve de qué paso estás ejecutando (ej. *"Paso 2/5: Editando `styles.css` para añadir..."*) para que siempre sepa en qué estás trabajando y nunca parezca que el asistente está bloqueado en silencio.
+3. **Narración Paso a Paso en Tiempo Real (Obligatorio):** Antes de ejecutar herramientas (lectura/edición de archivos, comandos, tests), informa siempre al usuario/desarrollador con un mensaje breve de qué paso estás ejecutando (ej. *"Paso 2/5: Editando `styles.css` para añadir..."*) para que siempre sepa en qué estás trabajando y nunca parezca que el asistente está bloqueado en silencio.
 4. **Mantener actualizado el sistema:** Actualizar `PROGRESS.md` con cada avance o hito completado.
