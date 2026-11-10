@@ -295,7 +295,7 @@ public class MediaReleaseTests
     }
 
     [Fact]
-    public void Operations_WhenConfirmed_ShouldThrowMediaReleaseDomainException()
+    public void AutomaticIdentification_WhenConfirmed_ShouldThrowMediaReleaseDomainException()
     {
         // Arrange
         var release = MediaRelease.Create(_testUserId, "A Love Supreme", "John Coltrane");
@@ -305,10 +305,73 @@ public class MediaReleaseTests
         var actUpdate = () => release.UpdateIdentifiedDetails("New Title", "New Artist");
         actUpdate.Should().Throw<MediaReleaseDomainException>()
             .WithMessage("*confirmado*");
+    }
 
-        var actEnrich = () => release.EnrichFromDiscogs(12345);
-        actEnrich.Should().Throw<MediaReleaseDomainException>()
-            .WithMessage("*confirmado*");
+    [Fact]
+    public void EnrichFromCatalogs_WhenConfirmed_ShouldAllowRectificationAndPreserveConfirmedStatusAndGrading()
+    {
+        // 1. Música (Discogs)
+        var vinyl = MediaRelease.CreateVinyl(_testUserId, "A Love Supreme (Wrong Edition)", "John Coltrane");
+        vinyl.SetGrading(MediaCondition.NearMint, MediaCondition.VeryGoodPlus);
+        vinyl.Confirm();
+
+        vinyl.EnrichFromDiscogs(
+            discogsReleaseId: 998877,
+            label: "Impulse!",
+            releaseYear: ReleaseYear.Create(1965),
+            country: "US",
+            coverImageUrl: "https://example.com/love-supreme.jpg",
+            title: "A Love Supreme",
+            artist: "John Coltrane",
+            catalogueNumber: CatalogueNumber.Create("A-77"));
+
+        vinyl.Status.Should().Be(ProcessingStatus.Confirmed);
+        vinyl.DiscogsReleaseId.Should().Be(998877);
+        vinyl.Title.Should().Be("A Love Supreme");
+        vinyl.Label.Should().Be("Impulse!");
+        vinyl.MediaCondition.Should().Be(MediaCondition.NearMint);
+        vinyl.SleeveCondition.Should().Be(MediaCondition.VeryGoodPlus);
+
+        // 2. Libros (OpenLibrary)
+        var book = MediaRelease.CreateBook(_testUserId, "Dune (Borrador)", "Frank Herbert");
+        book.SetGrading(MediaCondition.Mint, MediaCondition.NearMint);
+        book.Confirm();
+
+        book.EnrichFromBookCatalog(
+            editionKey: "OL999M",
+            title: "Dune (Edición Aniversario)",
+            author: "Frank Herbert",
+            publisher: "Nova",
+            publishYear: ReleaseYear.Create(1965),
+            pagesCount: 704);
+
+        book.Status.Should().Be(ProcessingStatus.Confirmed);
+        book.ExternalCatalogId.Should().Be("OL999M");
+        book.Title.Should().Be("Dune (Edición Aniversario)");
+        book.PagesCount.Should().Be(704);
+        book.MediaCondition.Should().Be(MediaCondition.Mint);
+        book.SleeveCondition.Should().Be(MediaCondition.NearMint);
+
+        // 3. Videojuegos (Game Catalog)
+        var game = MediaRelease.CreateVideoGame(_testUserId, "Silent Hill 2", "Konami", platform: "PS2");
+        game.SetGrading(MediaCondition.VeryGoodPlus, MediaCondition.VeryGood);
+        game.Confirm();
+
+        game.EnrichFromGameCatalog(
+            gameKey: "STEAM-2124490",
+            title: "Silent Hill 2 (Director's Cut)",
+            developer: "Team Silent",
+            publisher: "Konami",
+            releaseYear: ReleaseYear.Create(2001),
+            platform: "PlayStation 2");
+
+        game.Status.Should().Be(ProcessingStatus.Confirmed);
+        game.ExternalCatalogId.Should().Be("STEAM-2124490");
+        game.Title.Should().Be("Silent Hill 2 (Director's Cut)");
+        game.Artist.Should().Be("Team Silent");
+        game.Platform.Should().Be("PlayStation 2");
+        game.MediaCondition.Should().Be(MediaCondition.VeryGoodPlus);
+        game.SleeveCondition.Should().Be(MediaCondition.VeryGood);
     }
 
     [Fact]

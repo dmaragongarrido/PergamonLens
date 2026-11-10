@@ -48,6 +48,13 @@ public sealed class EnrichReleaseFromDiscogsCommandHandler : IRequestHandler<Enr
             year = parsedYear;
         }
 
+        CatalogueNumber? catNum = null;
+        if (!string.IsNullOrWhiteSpace(details.CatalogueNumber) &&
+            CatalogueNumber.TryCreate(details.CatalogueNumber, out var parsedCatNum, out _))
+        {
+            catNum = parsedCatNum;
+        }
+
         var tracks = details.Tracks?
             .Select(t => Track.Create(t.Position, t.Title, t.Duration))
             .ToList();
@@ -58,7 +65,10 @@ public sealed class EnrichReleaseFromDiscogsCommandHandler : IRequestHandler<Enr
             year,
             details.Country,
             details.CoverImageUrl,
-            tracks);
+            tracks,
+            details.Title,
+            details.Artist,
+            catNum);
 
         var detectedFormat = MediaFormatExtensions.ParseFromText(details.Format);
         if (detectedFormat.HasValue && detectedFormat.Value != release.Format)

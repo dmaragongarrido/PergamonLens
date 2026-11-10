@@ -394,7 +394,6 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
     /// </summary>
     public void UpdateFormat(MediaFormat format)
     {
-        EnsureNotConfirmed();
         Format = format;
         Category = format.GetCategory();
         if (format != MediaFormat.Vinyl)
@@ -406,7 +405,8 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
     }
 
     /// <summary>
-    /// Enriquece el lanzamiento con información contrastada obtenida de la API canónica de Discogs.
+    /// Enriquece o rectifica el lanzamiento con información contrastada obtenida de la API canónica de Discogs.
+    /// Si el ejemplar ya estaba confirmado en la colección, preserva el estado Confirmed y su graduación física.
     /// </summary>
     public void EnrichFromDiscogs(
         long discogsReleaseId,
@@ -414,20 +414,30 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         ReleaseYear? releaseYear = null,
         string? country = null,
         string? coverImageUrl = null,
-        IEnumerable<Track>? tracks = null)
+        IEnumerable<Track>? tracks = null,
+        string? title = null,
+        string? artist = null,
+        CatalogueNumber? catalogueNumber = null)
     {
-        EnsureNotConfirmed();
-
         if (discogsReleaseId <= 0)
         {
             throw new MediaReleaseDomainException("El identificador de release de Discogs debe ser un número positivo.");
         }
 
         DiscogsReleaseId = discogsReleaseId;
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            Title = title.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(artist))
+        {
+            Artist = artist.Trim();
+        }
         Label = label?.Trim() ?? Label;
         ReleaseYear = releaseYear ?? ReleaseYear;
         Country = country?.Trim() ?? Country;
         CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
+        CatalogueNumber = catalogueNumber ?? CatalogueNumber;
 
         if (tracks is not null)
         {
@@ -438,14 +448,18 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             }
         }
 
-        Status = ProcessingStatus.Enriched;
+        if (Status != ProcessingStatus.Confirmed)
+        {
+            Status = ProcessingStatus.Enriched;
+        }
         UpdatedAtUtc = DateTime.UtcNow;
 
         AddDomainEvent(new MediaReleaseEnrichedEvent(Id, discogsReleaseId, _tracks.Count, UpdatedAtUtc.Value));
     }
 
     /// <summary>
-    /// Enriquece el ejemplar bibliográfico con información oficial del catálogo de libros (OpenLibrary).
+    /// Enriquece o rectifica el ejemplar bibliográfico con información oficial del catálogo de libros (OpenLibrary).
+    /// Si el ejemplar ya estaba confirmado en la colección, preserva el estado Confirmed y su graduación física.
     /// </summary>
     public void EnrichFromBookCatalog(
         string editionKey,
@@ -457,8 +471,6 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? coverImageUrl = null,
         CatalogueNumber? isbn = null)
     {
-        EnsureNotConfirmed();
-
         if (string.IsNullOrWhiteSpace(editionKey))
         {
             throw new MediaReleaseDomainException("El identificador de edición bibliográfica no puede estar vacío.");
@@ -482,12 +494,16 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
         CatalogueNumber = isbn ?? CatalogueNumber;
 
-        Status = ProcessingStatus.Enriched;
+        if (Status != ProcessingStatus.Confirmed)
+        {
+            Status = ProcessingStatus.Enriched;
+        }
         UpdatedAtUtc = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Enriquece el videojuego físico con información oficial del catálogo gamer.
+    /// Enriquece o rectifica el videojuego físico con información oficial del catálogo gamer.
+    /// Si el ejemplar ya estaba confirmado en la colección, preserva el estado Confirmed y su graduación física.
     /// </summary>
     public void EnrichFromGameCatalog(
         string gameKey,
@@ -498,8 +514,6 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? platform = null,
         string? coverImageUrl = null)
     {
-        EnsureNotConfirmed();
-
         if (string.IsNullOrWhiteSpace(gameKey))
         {
             throw new MediaReleaseDomainException("El identificador de videojuego en catálogo no puede estar vacío.");
@@ -522,7 +536,10 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         }
         CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
 
-        Status = ProcessingStatus.Enriched;
+        if (Status != ProcessingStatus.Confirmed)
+        {
+            Status = ProcessingStatus.Enriched;
+        }
         UpdatedAtUtc = DateTime.UtcNow;
     }
 
