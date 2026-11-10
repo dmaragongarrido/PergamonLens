@@ -15,7 +15,7 @@ public sealed class PergamonLensDbContext : IdentityDbContext<ApplicationUser>
 {
     private readonly ICurrentUserService? _currentUserService;
 
-    public DbSet<MusicRelease> MusicReleases => Set<MusicRelease>();
+    public DbSet<MediaRelease> MediaReleases => Set<MediaRelease>();
     public DbSet<Track> Tracks => Set<Track>();
 
     public PergamonLensDbContext(
@@ -35,7 +35,7 @@ public sealed class PergamonLensDbContext : IdentityDbContext<ApplicationUser>
 
         // Global Query Filter para aislamiento multi-usuario irrefutable (OWASP BOLA / IDOR)
         // Si no hay usuario autenticado (ej. tareas en segundo plano o migraciones), no se filtra.
-        modelBuilder.Entity<MusicRelease>()
+        modelBuilder.Entity<MediaRelease>()
             .HasQueryFilter(r => CurrentUser == null || r.UserId == CurrentUser);
     }
 }

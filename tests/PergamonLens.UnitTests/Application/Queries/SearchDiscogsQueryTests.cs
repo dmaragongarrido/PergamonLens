@@ -1,6 +1,6 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
-using PergamonLens.Application.MusicReleases.Queries.SearchDiscogs;
+using PergamonLens.Application.MediaReleases.Queries.SearchDiscogs;
 using PergamonLens.Domain.Services;
 using PergamonLens.Domain.ValueObjects;
 

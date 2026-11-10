@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.ValueObjects;
@@ -29,11 +29,11 @@ public sealed class TrackConfiguration : IEntityTypeConfiguration<Track>
 
         builder.Property(x => x.Duration);
 
-        // Clave foránea fuertemente tipada hacia la raíz de agregado MusicRelease
-        builder.Property<MusicReleaseId>("MusicReleaseId")
-            .HasConversion(id => id.Value, val => new MusicReleaseId(val))
+        // Clave foránea fuertemente tipada hacia la raíz de agregado MediaRelease
+        builder.Property<MediaReleaseId>("MediaReleaseId")
+            .HasConversion(id => id.Value, val => new MediaReleaseId(val))
             .IsRequired();
 
-        builder.HasIndex("MusicReleaseId", "Position");
+        builder.HasIndex("MediaReleaseId", "Position");
     }
 }

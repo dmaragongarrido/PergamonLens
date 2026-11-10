@@ -40,9 +40,9 @@ public sealed class ReleaseScanBackgroundWorker : BackgroundService
 
                 using var scope = _scopeFactory.CreateScope();
                 var visionService = scope.ServiceProvider.GetRequiredService<IVisionService>();
-                var repository = scope.ServiceProvider.GetRequiredService<IMusicReleaseRepository>();
+                var repository = scope.ServiceProvider.GetRequiredService<IMediaReleaseRepository>();
 
-                var releaseId = new MusicReleaseId(task.ReleaseId);
+                var releaseId = new MediaReleaseId(task.ReleaseId);
                 var release = await repository.GetByIdAsync(releaseId, stoppingToken);
 
                 if (release is null)

@@ -29,9 +29,9 @@ public static class MappingExtensions
             formattedDuration);
     }
 
-    public static MusicReleaseDto ToDto(this MusicRelease release)
+    public static MediaReleaseDto ToDto(this MediaRelease release)
     {
-        return new MusicReleaseDto(
+        return new MediaReleaseDto(
             release.Id.Value,
             release.UserId.Value,
             release.Format.ToString(),

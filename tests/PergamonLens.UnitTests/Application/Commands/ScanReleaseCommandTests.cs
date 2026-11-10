@@ -1,7 +1,7 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using PergamonLens.Application.Common.Interfaces;
-using PergamonLens.Application.MusicReleases.Commands.ScanRelease;
+using PergamonLens.Application.MediaReleases.Commands.ScanRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -13,7 +13,7 @@ namespace PergamonLens.UnitTests.Application.Commands;
 public class ScanReleaseCommandTests
 {
     private readonly Mock<IVisionService> _visionServiceMock;
-    private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<IMediaReleaseRepository> _repositoryMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IDiscogsService> _discogsServiceMock;
     private readonly ScanReleaseCommandHandler _handler;
@@ -22,7 +22,7 @@ public class ScanReleaseCommandTests
     public ScanReleaseCommandTests()
     {
         _visionServiceMock = new Mock<IVisionService>();
-        _repositoryMock = new Mock<IMusicReleaseRepository>();
+        _repositoryMock = new Mock<IMediaReleaseRepository>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _currentUserServiceMock.Setup(s => s.UserId).Returns("default-test-user");
         _discogsServiceMock = new Mock<IDiscogsService>();
@@ -67,7 +67,7 @@ public class ScanReleaseCommandTests
         result.Label.Should().Be("Impulse!");
         result.Status.Should().Be("Identified");
 
-        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<MusicRelease>(), It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<MediaRelease>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

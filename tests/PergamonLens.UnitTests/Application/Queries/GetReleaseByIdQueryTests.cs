@@ -1,6 +1,6 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
-using PergamonLens.Application.MusicReleases.Queries.GetReleaseById;
+using PergamonLens.Application.MediaReleases.Queries.GetReleaseById;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Repositories;
 using PergamonLens.Domain.ValueObjects;
@@ -9,13 +9,13 @@ namespace PergamonLens.UnitTests.Application.Queries;
 
 public class GetReleaseByIdQueryTests
 {
-    private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<IMediaReleaseRepository> _repositoryMock;
     private readonly GetReleaseByIdQueryHandler _handler;
     private readonly GetReleaseByIdQueryValidator _validator;
 
     public GetReleaseByIdQueryTests()
     {
-        _repositoryMock = new Mock<IMusicReleaseRepository>();
+        _repositoryMock = new Mock<IMediaReleaseRepository>();
         _handler = new GetReleaseByIdQueryHandler(_repositoryMock.Object);
         _validator = new GetReleaseByIdQueryValidator();
     }
@@ -24,7 +24,7 @@ public class GetReleaseByIdQueryTests
     public async Task Handle_WhenReleaseExists_ShouldReturnDto()
     {
         // Arrange
-        var release = MusicRelease.Create(UserId.New(), "Blue Train", "John Coltrane");
+        var release = MediaRelease.Create(UserId.New(), "Blue Train", "John Coltrane");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -47,8 +47,8 @@ public class GetReleaseByIdQueryTests
         // Arrange
         var nonExistentId = Guid.NewGuid();
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(new MusicReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MusicRelease?)null);
+            .Setup(r => r.GetByIdAsync(new MediaReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MediaRelease?)null);
 
         var query = new GetReleaseByIdQuery(nonExistentId);
 

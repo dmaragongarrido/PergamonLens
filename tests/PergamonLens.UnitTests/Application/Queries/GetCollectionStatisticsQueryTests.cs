@@ -1,6 +1,6 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
-using PergamonLens.Application.MusicReleases.Queries.GetCollectionStatistics;
+using PergamonLens.Application.MediaReleases.Queries.GetCollectionStatistics;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
 using PergamonLens.Domain.ValueObjects;

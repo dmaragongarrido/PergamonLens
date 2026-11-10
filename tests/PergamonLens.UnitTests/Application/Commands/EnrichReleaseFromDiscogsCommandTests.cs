@@ -1,7 +1,7 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using PergamonLens.Application.Common.Exceptions;
-using PergamonLens.Application.MusicReleases.Commands.EnrichReleaseFromDiscogs;
+using PergamonLens.Application.MediaReleases.Commands.EnrichReleaseFromDiscogs;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -12,14 +12,14 @@ namespace PergamonLens.UnitTests.Application.Commands;
 
 public class EnrichReleaseFromDiscogsCommandTests
 {
-    private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<IMediaReleaseRepository> _repositoryMock;
     private readonly Mock<IDiscogsService> _discogsServiceMock;
     private readonly EnrichReleaseFromDiscogsCommandHandler _handler;
     private readonly EnrichReleaseFromDiscogsCommandValidator _validator;
 
     public EnrichReleaseFromDiscogsCommandTests()
     {
-        _repositoryMock = new Mock<IMusicReleaseRepository>();
+        _repositoryMock = new Mock<IMediaReleaseRepository>();
         _discogsServiceMock = new Mock<IDiscogsService>();
         _handler = new EnrichReleaseFromDiscogsCommandHandler(_repositoryMock.Object, _discogsServiceMock.Object);
         _validator = new EnrichReleaseFromDiscogsCommandValidator();
@@ -29,7 +29,7 @@ public class EnrichReleaseFromDiscogsCommandTests
     public async Task Handle_WhenReleaseAndDiscogsFound_ShouldEnrichAndReturnDto()
     {
         // Arrange
-        var release = MusicRelease.Create(UserId.New(), "Abbey Road", "The Beatles", MediaFormat.Vinyl);
+        var release = MediaRelease.Create(UserId.New(), "Abbey Road", "The Beatles", MediaFormat.Vinyl);
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -69,7 +69,7 @@ public class EnrichReleaseFromDiscogsCommandTests
         result.Country.Should().Be("UK");
         result.Tracks.Should().HaveCount(2);
 
-        _repositoryMock.Verify(r => r.UpdateAsync(It.Is<MusicRelease>(m =>
+        _repositoryMock.Verify(r => r.UpdateAsync(It.Is<MediaRelease>(m =>
             m.Id == release.Id &&
             m.Status == ProcessingStatus.Enriched &&
             m.Tracks.Count == 2), It.IsAny<CancellationToken>()), Times.Once);
@@ -81,8 +81,8 @@ public class EnrichReleaseFromDiscogsCommandTests
         // Arrange
         var nonExistentId = Guid.NewGuid();
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(new MusicReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MusicRelease?)null);
+            .Setup(r => r.GetByIdAsync(new MediaReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MediaRelease?)null);
 
         var command = new EnrichReleaseFromDiscogsCommand(nonExistentId, 12345);
 
@@ -97,7 +97,7 @@ public class EnrichReleaseFromDiscogsCommandTests
     public async Task Handle_WhenDiscogsDetailsNotFound_ShouldThrowNotFoundException()
     {
         // Arrange
-        var release = MusicRelease.Create(UserId.New(), "Abbey Road", "The Beatles");
+        var release = MediaRelease.Create(UserId.New(), "Abbey Road", "The Beatles");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);

@@ -10,7 +10,7 @@ namespace PergamonLens.UnitTests.Application.Mappings;
 public class MappingTests
 {
     [Fact]
-    public void MusicRelease_ToDto_ShouldMapAllFieldsAccurately()
+    public void MediaRelease_ToDto_ShouldMapAllFieldsAccurately()
     {
         // Arrange
         var userId = UserId.From("user-beatles");
@@ -18,7 +18,7 @@ public class MappingTests
         var catNum = CatalogueNumber.Create("PCS 7027");
         var year = ReleaseYear.Create(1967);
 
-        var release = MusicRelease.Create(
+        var release = MediaRelease.Create(
             userId,
             "Sgt. Pepper's Lonely Hearts Club Band",
             "The Beatles",
