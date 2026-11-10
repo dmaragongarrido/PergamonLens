@@ -14,11 +14,11 @@ Este archivo se carga automáticamente en el contexto del copiloto de IA al abri
 
 ## 🏗️ Estándares Técnicos & Arquitectura
 - **Patrón:** Clean Architecture / principios DDD (separación estricta de responsabilidades).
-  - `PergamonLens.Domain`: Cero dependencias externas. Entidades ricas, Value Objects, eventos de dominio.
+  - `PergamonLens.Domain`: Cero dependencias externas. Entidades ricas (`MediaRelease` polimórfica), Value Objects, eventos de dominio.
   - `PergamonLens.Application`: Casos de uso (CQRS / Mediador), DTOs, validaciones, interfaces de abstracción.
-  - `PergamonLens.Infrastructure`: EF Core, PostgreSQL (Npgsql), clientes externos (Discogs API, Vision AI), colas en segundo plano (`System.Threading.Channels`), resiliencia con Polly, ASP.NET Core Identity.
+  - `PergamonLens.Infrastructure`: EF Core, PostgreSQL (Npgsql), clientes externos (Discogs API, OpenLibrary API, Catálogo Gamer, Vision AI), colas en segundo plano (`System.Threading.Channels`), resiliencia con Polly, ASP.NET Core Identity.
   - `PergamonLens.Web`: ASP.NET Core Minimal APIs / Web API + UI responsive adaptada a móvil (acceso a cámara).
-- **Aislamiento Multi-usuario & Seguridad (OWASP / Anti-BOLA):** Todo lanzamiento (`MusicRelease`) pertenece estrictamente a un propietario (`UserId`). En la persistencia se aplican obligatoriamente *Global Query Filters* en EF Core (`WHERE UserId = @currentUserId`) para garantizar el aislamiento estricto e inviolable entre colecciones de usuarios.
+- **Aislamiento Multi-usuario & Seguridad (OWASP / Anti-BOLA):** Todo ejemplar físico (`MediaRelease`) pertenece estrictamente a un propietario (`UserId`). En la persistencia se aplican obligatoriamente *Global Query Filters* en EF Core (`WHERE UserId = @currentUserId`) para garantizar el aislamiento estricto e inviolable entre colecciones de usuarios.
 - **Identidad & Autenticación:** Basado en el estándar nativo de código abierto *ASP.NET Core Identity* sobre PostgreSQL (`MapIdentityApi`), hash PBKDF2/Argon2 con sal, tokens criptográficos y reseteo seguro sin costes de infraestructura ni servicios externos de pago.
 - **Motor de Visión e IA Multimodal (Estrategia Híbrida 0,00 €):**
   - Abstracción desacoplada en Dominio mediante `IVisionService`.

@@ -26,11 +26,11 @@ Catalogar colecciones físicas suele ser tedioso: introducir a mano códigos de 
 ### La Solución PergamonLens
 1. **Fotografía Rápida:** Tomas una foto de la portada, lomo o código de barras desde el móvil o navegador.
 2. **Extracción Visual con IA:** Un modelo de visión multimodal identifica título, artista/autor, edición, sello discográfico o editorial.
-3. **Enriquecimiento Asíncrono con APIs Especializadas:** El sistema cruza los datos automáticamente con bases de datos canónicas:
-   - 🎵 **Música:** Discogs API & MusicBrainz.
-   - 📚 **Libros:** Open Library & Google Books API.
-   - 🎮 **Videojuegos:** IGDB (Twitch) & RAWG API.
-4. **Bóveda Personal:** Tu colección organizada con estadísticas, valoración estimada, búsqueda instantánea y filtros avanzados.
+3. **Enriquecimiento Asíncrono con APIs Especializadas (0,00 €):** El sistema cruza los datos automáticamente con bases de datos canónicas abiertas:
+   - 🎵 **Música:** Discogs API (portadas, contraportadas, tracklists, géneros y notas de edición).
+   - 📚 **Libros & Cómics:** OpenLibrary API & Bookland ISBN `978`/`979` (cubiertas, editoriales, páginas, géneros literarios y primera frase/sinopsis).
+   - 🎮 **Videojuegos:** Catálogo Gamer Híbrido (MediaWiki Box-Art + Steam Store CDN en paralelo para carátulas verticales, estudios, consolas y reseñas).
+4. **Bóveda Personal & Experiencia de Comisario:** Tu colección organizada con geometría física adaptativa (`1:1`, `2:3`, `3:4`), *Liner Notes* / reseñas minimalistas entre comillas, filtros dinámicos por formato y género artístico, graduación de conservación y rectificación soberana en cualquier momento.
 
 ---
 
@@ -54,13 +54,14 @@ PergamonLens/
 
 ### 🧱 Principios de Diseño
 - **Clean Architecture & DDD Puro:** Reglas de negocio independientes de frameworks, bases de datos y librerías externas.
-  - **Aggregate Root Polivalente (`MusicRelease`):** Modela lanzamientos musicales físicos en múltiples formatos (`MediaFormat`: Vinilo, CD, Casete y Box Set), controlando el inventario de pistas (`Track`), graduación oficial Goldmine (`MediaCondition`) y especificaciones físicas (pulgadas, RPM, número de soportes).
-  - **Value Objects con Validación Estricta:** Inmutabilidad y blindaje contra *Primitive Obsession* (`Barcode` con cálculo y validación de checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MusicReleaseId`, `CollectionStatistics`).
-  - **Eventos de Dominio:** Desacoplamiento total para disparar acciones reactivas asíncronas (`MusicReleaseCreatedEvent`, `MusicReleaseEnrichedEvent`, etc.).
-- **Seguridad & Aislamiento Multi-usuario:** Modelo multi-coleccionista donde cada lanzamiento pertenece estrictamente a su propietario (`UserId`). Aislamiento garantizado en base de datos mediante *Global Query Filters* de EF Core contra vulnerabilidades de acceso cruzado (OWASP BOLA/IDOR). Autenticación de serie con ASP.NET Core Identity API Endpoints (PBKDF2 con sal, tokens criptográficos, bloqueo por fuerza bruta y recuperación segura a coste cero de licencias).
+  - **Aggregate Root Polimórfico (`MediaRelease`):** Modela ejemplares físicos culturales en tres categorías (`MediaCategory`: Música, Libros y Videojuegos) y múltiples soportes (`MediaFormat`: Vinilo, CD, Casete, Box Set, Tapa Dura, Rústica, Cómic/Manga, Disco Óptico, Cartucho y Ediciones Especiales), controlando el inventario de pistas (`Track`), graduación universal de conservación (`MediaCondition`: Goldmine, Bibliográfica y CIB), taxonomía cultural (`Genre`) y reseñas de comisario / *Liner Notes* (`Overview`).
+  - **Soberanía del Coleccionista:** El propietario conserva siempre la autoridad para re-vincular o rectificar manualmente la edición oficial de cualquier ejemplar desde los catálogos externos incluso después de haber confirmado su estado de conservación (`Confirmed`), mientras el dominio protege el ejemplar frente a sobrescrituras automáticas en segundo plano.
+  - **Value Objects con Validación Estricta:** Inmutabilidad y blindaje contra *Primitive Obsession* (`Barcode` con cálculo y validación de checksum GS1, `CatalogueNumber`, `ReleaseYear`, `MediaReleaseId`, `CollectionStatistics`).
+  - **Eventos de Dominio:** Desacoplamiento total para disparar acciones reactivas asíncronas (`MediaReleaseCreatedEvent`, `MediaReleaseEnrichedEvent`, `MediaReleaseConfirmedEvent`, `MediaReleaseFailedEvent`).
+- **Seguridad & Aislamiento Multi-usuario:** Modelo multi-coleccionista donde cada ejemplar pertenece estrictamente a su propietario (`UserId`). Aislamiento garantizado en base de datos mediante *Global Query Filters* de EF Core contra vulnerabilidades de acceso cruzado (OWASP BOLA/IDOR). Autenticación de serie con ASP.NET Core Identity API Endpoints (PBKDF2 con sal, tokens criptográficos, bloqueo por fuerza bruta y recuperación segura a coste cero de licencias).
 - **Pipeline de Visión e IA Multimodal (Estrategia Híbrida & Polimórfica):**
   - **Fase 1 (Escudo Anti-Cuota Determinista Local, 0 coste, ~2 ms):** Decodificación algorítmica local en memoria de códigos de barras (EAN-13, UPC, Code 128, QR) con `ZXing.Net` y `SkiaSharp`. Detección determinista de prefijos Bookland (ISBN 978/979) para categorización automática de libros sin IA.
-  - **Fase 2 (Visión Multimodal Polimórfica con Inferencia Estructurada):** Modelo de alta velocidad (**Google Gemini 2.0 Flash**) vía Google AI Studio (Tier gratuito permanente de 15 RPM sin tarjeta) con *Structured Outputs* (JSON Schema estricto) para catalogación polimórfica de **música (vinilos/CDs), libros y videojuegos**, incluyendo plataformas de consola, sellos/editoriales, identificadores y reconocimiento iconográfico de portadas sin texto.
+  - **Fase 2 (Visión Multimodal Polimórfica con Inferencia Estructurada):** Modelo de alta velocidad (**Google Gemini 2.0 Flash / Flash-Lite**) vía Google AI Studio (Tier gratuito permanente de 15 RPM sin tarjeta) con *Structured Outputs* (JSON Schema estricto) para catalogación polimórfica de **música (vinilos/CDs), libros y videojuegos**, incluyendo plataformas de consola, géneros artísticos, reseñas breves (*Liner Notes*), sellos/editoriales y reconocimiento iconográfico de portadas sin texto.
   - **Resiliencia & Rate Limiting (Polly):** Políticas de reintento exponencial con *jitter* ante posibles errores `429 Too Many Requests`, limitador de tasa interno (*Rate Limiter*) y degradación elegante (*Graceful Degradation*) a estado `PendingAnalysis` o entrada manual si la red falla.
   - **Privacidad & Offline (Ollama Fallback):** Soporte alternativo 100% desacoplado mediante el contrato [`IVisionService`](file:///src/PergamonLens.Domain/Services/IVisionService.cs) para inferencia local y privada con modelos *open source* (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) sin depender de proveedores cloud externos.
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
@@ -79,7 +80,7 @@ PergamonLens/
 | **ORM & Migraciones** | **Entity Framework Core** | Mapeo objeto-relacional y control de esquemas. |
 | **Seguridad & Identidad** | **ASP.NET Core Identity** | Autenticación REST nativa, hash PBKDF2 y sesiones sin coste externo. |
 | **Motor de Visión / IA** | **Gemini 2.0 Flash / Llama 3.2 Vision** | Inferencia multimodal estructurada (JSON) + OCR determinista local. |
-| **APIs Externas** | **Discogs, OpenLibrary, IGDB** | Enriquecimiento canónico de música, libros y videojuegos. |
+| **APIs Externas (0,00 €)** | **Discogs, OpenLibrary, MediaWiki/Steam** | Enriquecimiento canónico de música, libros y videojuegos sin llaves de pago. |
 | **Frontend Web** | **Web Responsive / SPA** | Interfaz optimizada para móvil con acceso directo a cámara WebRTC. |
 | **Testing** | **xUnit, FluentAssertions, Moq** | Cobertura exhaustiva de lógica de negocio y casos de uso. |
 | **Contenedores** | **Docker & Docker Compose** | Entorno de desarrollo reproducible con un solo comando. |
@@ -133,7 +134,13 @@ PergamonLens/
   - Autodetección visual de categoría, formato y consola mediante IA multimodal (`Gemini Flash`) + `ZXing.Net` en el escáner *1-Tap Lens*.
   - Enriquecimiento canónico a coste 0,00 € con **OpenLibrary API** (`IBookCatalogService`) y **Catálogo Gamer** (`IGameCatalogService` con MediaWiki Box-Art + Steam Store CDN).
   - Geometría física adaptativa según el medio (`1:1` cuadrado en Música, `2:3` vertical editorial en Libros y `3:4` estuche vertical en Videojuegos) y batería de **179 tests** (159 unitarios + 20 de integración) al 100% en verde.
-- [ ] **Hito 9: CI/CD, Despliegue & Producción**
+- [x] **Hito 9: Refinamiento DDD, Soberanía del Coleccionista, Taxonomía Cultural & Liner Notes**
+  - Alineación del Lenguaje Ubicuo en todo el dominio y persistencia (`MusicRelease` ➔ `MediaRelease`) con migración PostgreSQL sin pérdida de datos (`RenameTable`).
+  - Soberanía del Coleccionista: capacidad de rectificar y re-vincular ediciones desde catálogos oficiales incluso en ejemplares con estado `Confirmed`, preservando la graduación física.
+  - Taxonomía artística (`Genre`) con filtro dinámico en la bóveda y autocompletado canónico en alta manual.
+  - Experiencia de Comisario (*Liner Notes* / `Overview`): reseñas y notas editoriales breves de 1-2 frases extraídas de IA y catálogos oficiales, presentadas en cursiva entre comillas sin cabeceras redundantes.
+  - Portabilidad agnóstica de entorno y batería de **181 tests** (161 unitarios + 20 de integración) al 100% en verde.
+- [ ] **Hito 10: CI/CD, Despliegue & Producción**
   - Dockerización final multi-stage y optimización del pipeline de GitHub Actions.
   - Configuración de variables de entorno, secrets y publicación en producción.
   - Verificación final de escaparate técnico de autor.
