@@ -207,6 +207,10 @@ namespace PergamonLens.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("Genre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
                     b.Property<string>("Label")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -218,6 +222,10 @@ namespace PergamonLens.Infrastructure.Persistence.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Overview")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<int?>("PagesCount")
                         .HasColumnType("integer");

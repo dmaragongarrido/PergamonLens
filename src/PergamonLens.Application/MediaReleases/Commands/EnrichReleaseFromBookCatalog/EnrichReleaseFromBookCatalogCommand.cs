@@ -15,5 +15,7 @@ public sealed record EnrichReleaseFromBookCatalogCommand(
     int? PublishYear = null,
     int? PagesCount = null,
     string? CoverImageUrl = null,
-    string? Isbn = null) : IRequest<MediaReleaseDto>;
+    string? Isbn = null,
+    string? Genre = null,
+    string? Overview = null) : IRequest<MediaReleaseDto>;
 

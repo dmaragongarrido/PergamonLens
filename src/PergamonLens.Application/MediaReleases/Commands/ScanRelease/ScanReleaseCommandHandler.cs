@@ -206,7 +206,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
             barcode,
             catalogueNumber,
             label: extraction.DetectedLabel ?? discogsDetails?.Label,
-            notes: $"Análisis visual IA (confianza: {extraction.Confidence:P0}).");
+            notes: $"Análisis visual IA (confianza: {extraction.Confidence:P0}).",
+            genre: discogsDetails?.Genre ?? extraction.DetectedGenre,
+            overview: !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : discogsDetails?.Overview);
 
         if (discogsDetails is not null)
         {
@@ -226,7 +228,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 barcode,
                 catalogueNumber,
                 releaseYear: year,
-                label: discogsDetails.Label ?? extraction.DetectedLabel);
+                label: discogsDetails.Label ?? extraction.DetectedLabel,
+                genre: discogsDetails.Genre ?? extraction.DetectedGenre,
+                overview: !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : discogsDetails.Overview);
 
             release.EnrichFromDiscogs(
                 discogsDetails.ReleaseId,
@@ -234,7 +238,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 year,
                 discogsDetails.Country,
                 discogsDetails.CoverImageUrl,
-                tracks);
+                tracks,
+                genre: discogsDetails.Genre ?? extraction.DetectedGenre,
+                overview: !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : discogsDetails.Overview);
         }
         else if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle) && !string.IsNullOrWhiteSpace(extraction.DetectedArtist))
         {
@@ -251,7 +257,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 barcode,
                 catalogueNumber,
                 releaseYear: yearFromVision,
-                label: extraction.DetectedLabel);
+                label: extraction.DetectedLabel,
+                genre: extraction.DetectedGenre,
+                overview: extraction.DetectedOverview);
         }
         else
         {
@@ -346,7 +354,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
             pagesCount: bookMatch?.PagesCount,
             coverImageUrl: bookMatch?.CoverImageUrl,
             notes: $"Análisis visual IA de libro (confianza: {extraction.Confidence:P0}).",
-            externalCatalogId: bookMatch?.EditionKey);
+            externalCatalogId: bookMatch?.EditionKey,
+            genre: bookMatch?.Genre ?? extraction.DetectedGenre,
+            overview: !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : bookMatch?.Overview);
 
         if (bookMatch is not null)
         {
@@ -364,7 +374,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 pubYear,
                 bookMatch.PagesCount,
                 bookMatch.CoverImageUrl,
-                catalogueNumber);
+                catalogueNumber,
+                bookMatch.Genre ?? extraction.DetectedGenre,
+                !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : bookMatch.Overview);
         }
         else if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle))
         {
@@ -381,7 +393,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 barcode,
                 catalogueNumber,
                 releaseYear: yearFromVision,
-                label: extraction.DetectedLabel);
+                label: extraction.DetectedLabel,
+                genre: extraction.DetectedGenre,
+                overview: extraction.DetectedOverview);
         }
         else
         {
@@ -450,7 +464,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
             publisher: gameMatch?.Publisher ?? extraction.DetectedLabel,
             coverImageUrl: gameMatch?.CoverImageUrl,
             notes: $"Análisis visual IA de videojuego (confianza: {extraction.Confidence:P0}).",
-            externalCatalogId: gameMatch?.GameKey);
+            externalCatalogId: gameMatch?.GameKey,
+            genre: gameMatch?.Genre ?? extraction.DetectedGenre,
+            overview: !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : gameMatch?.Overview);
 
         if (gameMatch is not null)
         {
@@ -468,7 +484,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 gameMatch.Publisher ?? extraction.DetectedLabel,
                 pubYear,
                 extraction.DetectedPlatform ?? gameMatch.Platform,
-                gameMatch.CoverImageUrl);
+                gameMatch.CoverImageUrl,
+                gameMatch.Genre ?? extraction.DetectedGenre,
+                !string.IsNullOrWhiteSpace(extraction.DetectedOverview) ? extraction.DetectedOverview : gameMatch.Overview);
         }
         else if (!string.IsNullOrWhiteSpace(extraction.DetectedTitle))
         {
@@ -486,7 +504,9 @@ public sealed class ScanReleaseCommandHandler : IRequestHandler<ScanReleaseComma
                 catalogueNumber,
                 releaseYear: yearFromVision,
                 label: extraction.DetectedLabel,
-                platform: extraction.DetectedPlatform);
+                platform: extraction.DetectedPlatform,
+                genre: extraction.DetectedGenre,
+                overview: extraction.DetectedOverview);
         }
         else
         {

@@ -174,7 +174,9 @@ public static class MediaReleaseEndpoints
                 PublishYear: request.PublishYear,
                 PagesCount: request.PagesCount,
                 CoverImageUrl: request.CoverImageUrl,
-                Isbn: request.Isbn);
+                Isbn: request.Isbn,
+                Genre: request.Genre,
+                Overview: request.Overview);
 
             var result = await sender.Send(command, ct);
             return Results.Ok(result);
@@ -199,7 +201,9 @@ public static class MediaReleaseEndpoints
                 Publisher: request.Publisher,
                 ReleaseYear: request.ReleaseYear,
                 Platform: request.Platform,
-                CoverImageUrl: request.CoverImageUrl);
+                CoverImageUrl: request.CoverImageUrl,
+                Genre: request.Genre,
+                Overview: request.Overview);
 
             var result = await sender.Send(command, ct);
             return Results.Ok(result);
@@ -244,7 +248,9 @@ public sealed record EnrichBookReleaseRequest(
     int? PublishYear = null,
     int? PagesCount = null,
     string? CoverImageUrl = null,
-    string? Isbn = null);
+    string? Isbn = null,
+    string? Genre = null,
+    string? Overview = null);
 
 public sealed record EnrichGameReleaseRequest(
     string GameKey,
@@ -253,4 +259,6 @@ public sealed record EnrichGameReleaseRequest(
     string? Publisher = null,
     int? ReleaseYear = null,
     string? Platform = null,
-    string? CoverImageUrl = null);
+    string? CoverImageUrl = null,
+    string? Genre = null,
+    string? Overview = null);

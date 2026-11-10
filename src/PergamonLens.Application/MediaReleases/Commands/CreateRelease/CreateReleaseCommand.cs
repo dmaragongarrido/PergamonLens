@@ -23,4 +23,6 @@ public sealed record CreateReleaseCommand(
     string? Notes = null,
     string? UserId = null,
     int? PagesCount = null,
-    string? Platform = null) : IRequest<MediaReleaseDto>;
+    string? Platform = null,
+    string? Genre = null,
+    string? Overview = null) : IRequest<MediaReleaseDto>;

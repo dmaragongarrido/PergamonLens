@@ -14,7 +14,9 @@ public sealed record GeminiVisionAnalysisDto(
     string? CatalogueOrIdentifier,
     string? Barcode,
     double Confidence,
-    string? SuggestedSearchQuery);
+    string? SuggestedSearchQuery,
+    string? Genre = null,
+    string? Overview = null);
 
 /// <summary>
 /// Contrato del cliente HTTP para inferencia multimodal con Google Gemini.

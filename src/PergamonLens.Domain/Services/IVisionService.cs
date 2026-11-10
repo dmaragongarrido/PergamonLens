@@ -26,7 +26,9 @@ public sealed record VisionExtractionResult(
     string? DetectedFormat = null,
     string? DetectedPlatform = null,
     int? DetectedReleaseYear = null,
-    string? SuggestedSearchQuery = null)
+    string? SuggestedSearchQuery = null,
+    string? DetectedGenre = null,
+    string? DetectedOverview = null)
 {
     /// <summary>
     /// Alias semántico para creadores en medios distintos a música (Autor en libros, Desarrollador en videojuegos).

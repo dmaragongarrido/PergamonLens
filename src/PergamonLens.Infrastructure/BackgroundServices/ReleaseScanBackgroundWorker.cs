@@ -75,7 +75,9 @@ public sealed class ReleaseScanBackgroundWorker : BackgroundService
                         extraction.DetectedArtist,
                         barcode,
                         catNo,
-                        label: extraction.DetectedLabel);
+                        label: extraction.DetectedLabel,
+                        genre: extraction.DetectedGenre,
+                        overview: extraction.DetectedOverview);
 
                     await repository.UpdateAsync(release, stoppingToken);
                     _logger.LogInformation("Release {ReleaseId} identificada exitosamente como '{Title}' de '{Artist}'",

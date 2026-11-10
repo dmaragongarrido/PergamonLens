@@ -436,4 +436,49 @@ public class MediaReleaseTests
         release.SleeveCondition.Should().Be(MediaCondition.VeryGoodPlus);
         release.UpdatedAtUtc.Should().NotBeNull();
     }
+
+    [Fact]
+    public void CulturalMetadata_GenreAndOverview_ShouldPersistAcrossCreationAndCatalogEnrichment()
+    {
+        // 1. Creación con Genre y Overview (Liner Notes)
+        var vinyl = MediaRelease.CreateVinyl(
+            _testUserId,
+            "Wish You Were Here",
+            "Pink Floyd",
+            genre: "Rock Progresivo",
+            overview: "Grabado en Abbey Road en 1975 como tributo a Syd Barrett.");
+
+        vinyl.Genre.Should().Be("Rock Progresivo");
+        vinyl.Overview.Should().Be("Grabado en Abbey Road en 1975 como tributo a Syd Barrett.");
+
+        // 2. Enriquecimiento desde catálogo bibliográfico actualiza Genre y Overview
+        var book = MediaRelease.CreateBook(_testUserId, "Fundación", "Isaac Asimov");
+        book.EnrichFromBookCatalog(
+            editionKey: "OL12345M",
+            title: "Fundación",
+            author: "Isaac Asimov",
+            publisher: "Minotauro",
+            publishYear: ReleaseYear.Create(1951),
+            pagesCount: 255,
+            genre: "Ciencia Ficción",
+            overview: "Hari Seldon predice la caída del Imperio Galáctico mediante la psicohistoria.");
+
+        book.Genre.Should().Be("Ciencia Ficción");
+        book.Overview.Should().Contain("psicohistoria");
+
+        // 3. Enriquecimiento desde catálogo gamer actualiza Genre y Overview
+        var game = MediaRelease.CreateVideoGame(_testUserId, "Bloodborne", "FromSoftware", platform: "PlayStation 4");
+        game.EnrichFromGameCatalog(
+            gameKey: "WIKI-5544",
+            title: "Bloodborne",
+            developer: "FromSoftware",
+            publisher: "Sony Computer Entertainment",
+            releaseYear: ReleaseYear.Create(2015),
+            platform: "PlayStation 4",
+            genre: "Action RPG • Horror Cósmico",
+            overview: "Un cazador recorre la ciudad gótica de Yharnam durante la noche de la caza.");
+
+        game.Genre.Should().Be("Action RPG • Horror Cósmico");
+        game.Overview.Should().Contain("Yharnam");
+    }
 }

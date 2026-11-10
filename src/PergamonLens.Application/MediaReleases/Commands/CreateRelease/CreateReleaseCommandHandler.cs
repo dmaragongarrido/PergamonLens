@@ -65,7 +65,9 @@ public sealed class CreateReleaseCommandHandler : IRequestHandler<CreateReleaseC
             request.CoverImageUrl,
             request.Notes,
             request.PagesCount,
-            request.Platform);
+            request.Platform,
+            genre: request.Genre,
+            overview: request.Overview);
 
         await _repository.AddAsync(release, cancellationToken);
 

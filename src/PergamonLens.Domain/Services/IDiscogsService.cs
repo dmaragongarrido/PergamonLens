@@ -14,7 +14,8 @@ public sealed record DiscogsSearchResult(
     string? CatalogueNumber,
     string? Country,
     string? CoverThumbUrl,
-    string? Format = null);
+    string? Format = null,
+    string? Genre = null);
 
 /// <summary>
 /// Metadatos detallados de una edición concreta en Discogs (Vinilo, CD, Casete, etc.).
@@ -30,7 +31,9 @@ public sealed record DiscogsReleaseDetails(
     string? CoverImageUrl,
     IReadOnlyList<DiscogsTrackItem> Tracks,
     string? Format = null,
-    string? BackCoverImageUrl = null);
+    string? BackCoverImageUrl = null,
+    string? Genre = null,
+    string? Overview = null);
 
 /// <summary>
 /// Representa un corte musical extraído de Discogs.

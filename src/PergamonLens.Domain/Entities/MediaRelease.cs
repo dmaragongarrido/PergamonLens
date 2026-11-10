@@ -38,6 +38,10 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
     public string? Platform { get; private set; }
     public string? ExternalCatalogId { get; private set; }
 
+    // Taxonomía cultural y reseña editorial (Liner Notes / Sinopsis breve)
+    public string? Genre { get; private set; }
+    public string? Overview { get; private set; }
+
     // Graduación del estado de conservación (Goldmine / Bibliográfico / CIB)
     public MediaCondition? MediaCondition { get; private set; }
     public MediaCondition? SleeveCondition { get; private set; }
@@ -72,7 +76,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         DateTime createdAtUtc,
         int? pagesCount = null,
         string? platform = null,
-        string? externalCatalogId = null) : base(id)
+        string? externalCatalogId = null,
+        string? genre = null,
+        string? overview = null) : base(id)
     {
         UserId = userId;
         Category = format.GetCategory();
@@ -94,6 +100,8 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         PagesCount = pagesCount;
         Platform = platform;
         ExternalCatalogId = externalCatalogId;
+        Genre = genre;
+        Overview = overview;
     }
 
     // Constructor privado requerido por EF Core
@@ -119,7 +127,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? notes = null,
         int? pagesCount = null,
         string? platform = null,
-        string? externalCatalogId = null)
+        string? externalCatalogId = null,
+        string? genre = null,
+        string? overview = null)
     {
         ArgumentNullException.ThrowIfNull(userId);
         ValidateTitle(title);
@@ -158,7 +168,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             now,
             pagesCount,
             platform?.Trim(),
-            externalCatalogId?.Trim());
+            externalCatalogId?.Trim(),
+            genre?.Trim(),
+            overview?.Trim());
 
         release.AddDomainEvent(new MediaReleaseCreatedEvent(id, userId, release.Title, release.Artist, format, now));
 
@@ -181,7 +193,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? label = null,
         string? country = null,
         string? coverImageUrl = null,
-        string? notes = null)
+        string? notes = null,
+        string? genre = null,
+        string? overview = null)
     {
         return Create(
             userId,
@@ -197,7 +211,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             label,
             country,
             coverImageUrl,
-            notes);
+            notes,
+            genre: genre,
+            overview: overview);
     }
 
     /// <summary>
@@ -214,7 +230,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? label = null,
         string? country = null,
         string? coverImageUrl = null,
-        string? notes = null)
+        string? notes = null,
+        string? genre = null,
+        string? overview = null)
     {
         return Create(
             userId,
@@ -230,7 +248,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             label,
             country,
             coverImageUrl,
-            notes);
+            notes,
+            genre: genre,
+            overview: overview);
     }
 
     /// <summary>
@@ -247,7 +267,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? label = null,
         string? country = null,
         string? coverImageUrl = null,
-        string? notes = null)
+        string? notes = null,
+        string? genre = null,
+        string? overview = null)
     {
         return Create(
             userId,
@@ -263,7 +285,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             label,
             country,
             coverImageUrl,
-            notes);
+            notes,
+            genre: genre,
+            overview: overview);
     }
 
     /// <summary>
@@ -282,7 +306,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? country = null,
         string? coverImageUrl = null,
         string? notes = null,
-        string? externalCatalogId = null)
+        string? externalCatalogId = null,
+        string? genre = null,
+        string? overview = null)
     {
         if (format.GetCategory() != MediaCategory.Books)
         {
@@ -306,7 +332,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             notes: notes,
             pagesCount: pagesCount,
             platform: null,
-            externalCatalogId: externalCatalogId);
+            externalCatalogId: externalCatalogId,
+            genre: genre,
+            overview: overview);
     }
 
     /// <summary>
@@ -326,7 +354,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? regionOrCountry = null,
         string? coverImageUrl = null,
         string? notes = null,
-        string? externalCatalogId = null)
+        string? externalCatalogId = null,
+        string? genre = null,
+        string? overview = null)
     {
         if (format.GetCategory() != MediaCategory.VideoGames)
         {
@@ -350,7 +380,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             notes: notes,
             pagesCount: null,
             platform: platform,
-            externalCatalogId: externalCatalogId);
+            externalCatalogId: externalCatalogId,
+            genre: genre,
+            overview: overview);
     }
 
     /// <summary>
@@ -365,7 +397,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? label = null,
         string? country = null,
         int? pagesCount = null,
-        string? platform = null)
+        string? platform = null,
+        string? genre = null,
+        string? overview = null)
     {
         EnsureNotConfirmed();
         ValidateTitle(title);
@@ -380,6 +414,14 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         Country = country?.Trim() ?? Country;
         PagesCount = pagesCount ?? PagesCount;
         Platform = platform?.Trim() ?? Platform;
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            Genre = genre.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(overview))
+        {
+            Overview = overview.Trim();
+        }
 
         if (Status is ProcessingStatus.PendingAnalysis or ProcessingStatus.Failed)
         {
@@ -417,7 +459,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         IEnumerable<Track>? tracks = null,
         string? title = null,
         string? artist = null,
-        CatalogueNumber? catalogueNumber = null)
+        CatalogueNumber? catalogueNumber = null,
+        string? genre = null,
+        string? overview = null)
     {
         if (discogsReleaseId <= 0)
         {
@@ -438,6 +482,14 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         Country = country?.Trim() ?? Country;
         CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
         CatalogueNumber = catalogueNumber ?? CatalogueNumber;
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            Genre = genre.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(overview))
+        {
+            Overview = overview.Trim();
+        }
 
         if (tracks is not null)
         {
@@ -469,7 +521,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         ReleaseYear? publishYear = null,
         int? pagesCount = null,
         string? coverImageUrl = null,
-        CatalogueNumber? isbn = null)
+        CatalogueNumber? isbn = null,
+        string? genre = null,
+        string? overview = null)
     {
         if (string.IsNullOrWhiteSpace(editionKey))
         {
@@ -493,6 +547,14 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         }
         CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
         CatalogueNumber = isbn ?? CatalogueNumber;
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            Genre = genre.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(overview))
+        {
+            Overview = overview.Trim();
+        }
 
         if (Status != ProcessingStatus.Confirmed)
         {
@@ -512,7 +574,9 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         string? publisher = null,
         ReleaseYear? releaseYear = null,
         string? platform = null,
-        string? coverImageUrl = null)
+        string? coverImageUrl = null,
+        string? genre = null,
+        string? overview = null)
     {
         if (string.IsNullOrWhiteSpace(gameKey))
         {
@@ -535,10 +599,34 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
             Platform = platform.Trim();
         }
         CoverImageUrl = coverImageUrl?.Trim() ?? CoverImageUrl;
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            Genre = genre.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(overview))
+        {
+            Overview = overview.Trim();
+        }
 
         if (Status != ProcessingStatus.Confirmed)
         {
             Status = ProcessingStatus.Enriched;
+        }
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Actualiza o complementa la taxonomía cultural (género/estilo) y la reseña/liner notes del ejemplar.
+    /// </summary>
+    public void UpdateCulturalMetadata(string? genre, string? overview)
+    {
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            Genre = genre.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(overview))
+        {
+            Overview = overview.Trim();
         }
         UpdatedAtUtc = DateTime.UtcNow;
     }

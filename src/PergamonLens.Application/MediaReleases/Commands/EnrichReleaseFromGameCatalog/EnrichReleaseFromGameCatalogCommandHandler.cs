@@ -39,7 +39,9 @@ public sealed class EnrichReleaseFromGameCatalogCommandHandler : IRequestHandler
             request.Publisher,
             releaseYear,
             request.Platform,
-            request.CoverImageUrl);
+            request.CoverImageUrl,
+            request.Genre,
+            request.Overview);
 
         await _repository.UpdateAsync(release, cancellationToken);
 

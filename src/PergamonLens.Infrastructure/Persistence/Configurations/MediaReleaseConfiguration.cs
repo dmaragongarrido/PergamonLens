@@ -82,6 +82,12 @@ public sealed class MediaReleaseConfiguration : IEntityTypeConfiguration<MediaRe
         builder.Property(x => x.ExternalCatalogId)
             .HasMaxLength(120);
 
+        builder.Property(x => x.Genre)
+            .HasMaxLength(150);
+
+        builder.Property(x => x.Overview)
+            .HasMaxLength(1000);
+
         builder.Property(x => x.MediaCondition)
             .HasConversion<string>()
             .HasMaxLength(30);

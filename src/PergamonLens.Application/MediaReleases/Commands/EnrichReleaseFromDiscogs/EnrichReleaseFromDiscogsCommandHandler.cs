@@ -68,7 +68,9 @@ public sealed class EnrichReleaseFromDiscogsCommandHandler : IRequestHandler<Enr
             tracks,
             details.Title,
             details.Artist,
-            catNum);
+            catNum,
+            details.Genre,
+            details.Overview);
 
         var detectedFormat = MediaFormatExtensions.ParseFromText(details.Format);
         if (detectedFormat.HasValue && detectedFormat.Value != release.Format)

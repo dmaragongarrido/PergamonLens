@@ -71,6 +71,7 @@ public sealed class MediaReleaseRepository : IMediaReleaseRepository
                 (r.Label != null && r.Label.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.Country != null && r.Country.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.Platform != null && r.Platform.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
+                (r.Genre != null && r.Genre.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.Barcode != null && r.Barcode.Value.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.CatalogueNumber != null && r.CatalogueNumber.Value.Contains(normalized, StringComparison.OrdinalIgnoreCase)) ||
                 (r.ReleaseYear != null && r.ReleaseYear.Value.ToString().Contains(normalized, StringComparison.OrdinalIgnoreCase)))

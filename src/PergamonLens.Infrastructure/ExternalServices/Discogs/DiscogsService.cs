@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PergamonLens.Domain.Services;
@@ -10,7 +11,7 @@ namespace PergamonLens.Infrastructure.ExternalServices.Discogs;
 /// <summary>
 /// Cliente HTTP para la API canónica de Discogs con gestión de resiliencia y mapeo de contratos de dominio.
 /// </summary>
-public sealed class DiscogsService : IDiscogsService
+public sealed partial class DiscogsService : IDiscogsService
 {
     private readonly HttpClient _httpClient;
     private readonly IOptions<DiscogsOptions> _options;
@@ -92,6 +93,16 @@ public sealed class DiscogsService : IDiscogsService
             string? coverImageUrl = response.Images?.FirstOrDefault()?.Uri;
             string? backCoverImageUrl = response.Images?.Skip(1).FirstOrDefault()?.Uri;
             string? format = response.Formats?.FirstOrDefault()?.Name;
+            string? genre = FormatGenreAndStyle(response.Genres, response.Styles);
+            string? overview = FormatDiscogsOverview(
+                response.Notes,
+                response.Title,
+                artist,
+                response.Year,
+                label,
+                response.Country,
+                genre,
+                response.Tracklist?.Count ?? 0);
 
             var tracks = (response.Tracklist ?? [])
                 .Where(t => !string.IsNullOrWhiteSpace(t.Title))
@@ -112,7 +123,9 @@ public sealed class DiscogsService : IDiscogsService
                 coverImageUrl,
                 tracks,
                 format,
-                backCoverImageUrl);
+                backCoverImageUrl,
+                genre,
+                overview);
         }
         catch (HttpRequestException ex)
         {
@@ -139,6 +152,7 @@ public sealed class DiscogsService : IDiscogsService
                     var (artist, title) = SplitArtistAndTitle(r.Title);
                     int? year = int.TryParse(r.Year, out int y) ? y : null;
                     string? format = r.Format?.FirstOrDefault();
+                    string? genre = FormatGenreAndStyle(r.Genre, r.Style);
 
                     return new DiscogsSearchResult(
                         r.Id,
@@ -149,7 +163,8 @@ public sealed class DiscogsService : IDiscogsService
                         r.Catno,
                         r.Country,
                         r.Thumb,
-                        format);
+                        format,
+                        genre);
                 })
                 .ToList();
         }
@@ -159,6 +174,93 @@ public sealed class DiscogsService : IDiscogsService
             return [];
         }
     }
+
+    private static string? FormatGenreAndStyle(List<string>? genres, List<string>? styles)
+    {
+        var primaryStyle = styles?.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s))?.Trim();
+        var primaryGenre = genres?.FirstOrDefault(g => !string.IsNullOrWhiteSpace(g))?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(primaryStyle) && !string.IsNullOrWhiteSpace(primaryGenre) &&
+            !primaryStyle.Equals(primaryGenre, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{primaryGenre} / {primaryStyle}";
+        }
+
+        return primaryStyle ?? primaryGenre;
+    }
+
+    private static string? FormatDiscogsOverview(
+        string? rawNotes,
+        string title,
+        string artist,
+        int? year,
+        string? label,
+        string? country,
+        string? genre,
+        int trackCount)
+    {
+        if (!string.IsNullOrWhiteSpace(rawNotes))
+        {
+            var cleaned = DiscogsBbCodeRegex().Replace(rawNotes, "$1");
+            var lines = cleaned
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(line => line.Length >= 25 &&
+                               !line.Contains("Matrix", StringComparison.OrdinalIgnoreCase) &&
+                               !line.Contains("Barcode", StringComparison.OrdinalIgnoreCase) &&
+                               !line.Contains("Rights Society", StringComparison.OrdinalIgnoreCase) &&
+                               !line.Contains("http", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var candidate = lines.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                if (candidate.Length > 220)
+                {
+                    candidate = candidate[..217].TrimEnd() + "...";
+                }
+                return candidate;
+            }
+        }
+
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            parts.Add($"Obra representativa de {genre}");
+        }
+        else
+        {
+            parts.Add($"Edición fonográfica de {artist.Trim()}");
+        }
+
+        if (year.HasValue && !string.IsNullOrWhiteSpace(label))
+        {
+            parts.Add($"editada en {year.Value} bajo el sello {label.Trim()}");
+        }
+        else if (year.HasValue)
+        {
+            parts.Add($"publicada en {year.Value}");
+        }
+        else if (!string.IsNullOrWhiteSpace(label))
+        {
+            parts.Add($"publicada por {label.Trim()}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            parts.Add($"({country.Trim()})");
+        }
+
+        string sentence = string.Join(" ", parts) + ".";
+        if (trackCount > 0)
+        {
+            sentence += $" Contiene {trackCount} cortes registrados en esta edición física.";
+        }
+
+        return sentence;
+    }
+
+    [GeneratedRegex(@"\[(?:a|l|r|m|url|b|i|u)=?([^\]]*)\]", RegexOptions.Compiled)]
+    private static partial Regex DiscogsBbCodeRegex();
 
     private static (string Artist, string Title) SplitArtistAndTitle(string fullTitle)
     {

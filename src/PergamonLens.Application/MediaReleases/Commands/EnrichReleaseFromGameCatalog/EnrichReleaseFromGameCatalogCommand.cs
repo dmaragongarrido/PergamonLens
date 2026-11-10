@@ -14,5 +14,7 @@ public sealed record EnrichReleaseFromGameCatalogCommand(
     string? Publisher = null,
     int? ReleaseYear = null,
     string? Platform = null,
-    string? CoverImageUrl = null) : IRequest<MediaReleaseDto>;
+    string? CoverImageUrl = null,
+    string? Genre = null,
+    string? Overview = null) : IRequest<MediaReleaseDto>;
 

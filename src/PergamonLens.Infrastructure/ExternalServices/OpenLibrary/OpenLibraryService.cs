@@ -11,7 +11,7 @@ namespace PergamonLens.Infrastructure.ExternalServices.OpenLibrary;
 /// </summary>
 public sealed class OpenLibraryService : IBookCatalogService
 {
-    private const string FieldsList = "key,title,author_name,first_publish_year,publisher,isbn,number_of_pages_median,cover_i,edition_key";
+    private const string FieldsList = "key,title,author_name,first_publish_year,publisher,isbn,number_of_pages_median,cover_i,edition_key,subject,first_sentence";
 
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenLibraryService> _logger;
@@ -143,6 +143,8 @@ public sealed class OpenLibraryService : IBookCatalogService
                     : null;
 
                 string? isbn = preferredIsbn ?? ExtractPreferredIsbn(item);
+                string? genre = ExtractBookGenre(item);
+                string? overview = ExtractBookOverview(item, author, publishYear, publisher, pagesCount, genre);
 
                 string? coverUrl = null;
                 if (item.TryGetProperty("cover_i", out var cProp) && cProp.TryGetInt64(out var coverId) && coverId > 0)
@@ -162,7 +164,9 @@ public sealed class OpenLibraryService : IBookCatalogService
                     Publisher: publisher?.Trim(),
                     Isbn: isbn,
                     PagesCount: pagesCount,
-                    CoverImageUrl: coverUrl));
+                    CoverImageUrl: coverUrl,
+                    Genre: genre,
+                    Overview: overview));
             }
 
             return list;
@@ -172,6 +176,109 @@ public sealed class OpenLibraryService : IBookCatalogService
             _logger.LogWarning(ex, "Error al consultar OpenLibrary API ({Url})", relativeUrl);
             return [];
         }
+    }
+
+    private static string? ExtractBookGenre(JsonElement element)
+    {
+        if (!element.TryGetProperty("subject", out var arr) || arr.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var item in arr.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var val = item.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(val) || val.Length > 45 || val.Length < 3)
+            {
+                continue;
+            }
+
+            if (val.Contains("Accessible book", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Protected DAISY", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("In library", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Large type", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Translations", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("OverDrive", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains(" Reading Level", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("New York Times", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Open Library", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return val;
+        }
+
+        return null;
+    }
+
+    private static string? ExtractBookOverview(
+        JsonElement element,
+        string author,
+        int? publishYear,
+        string? publisher,
+        int? pagesCount,
+        string? genre)
+    {
+        string? firstSentence = null;
+        if (element.TryGetProperty("first_sentence", out var fsProp))
+        {
+            if (fsProp.ValueKind == JsonValueKind.String)
+            {
+                firstSentence = fsProp.GetString();
+            }
+            else if (fsProp.ValueKind == JsonValueKind.Array)
+            {
+                firstSentence = ExtractFirstStringFromArray(element, "first_sentence");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(firstSentence))
+        {
+            var cleaned = firstSentence.Trim().Trim('"');
+            if (cleaned.Length >= 20)
+            {
+                if (cleaned.Length > 220)
+                {
+                    cleaned = cleaned[..217].TrimEnd() + "...";
+                }
+                return cleaned;
+            }
+        }
+
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            parts.Add($"Obra literaria de {genre} escrita por {author.Trim()}");
+        }
+        else
+        {
+            parts.Add($"Obra escrita por {author.Trim()}");
+        }
+
+        if (publishYear.HasValue)
+        {
+            parts.Add($"publicada originalmente en {publishYear.Value}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(publisher))
+        {
+            parts.Add($"(edición de {publisher.Trim()})");
+        }
+
+        string note = string.Join(" ", parts) + ".";
+        if (pagesCount.HasValue && pagesCount.Value > 0)
+        {
+            note += $" Consta de {pagesCount.Value} páginas.";
+        }
+
+        return note;
     }
 
     private static string? ExtractFirstStringFromArray(JsonElement element, string propertyName)

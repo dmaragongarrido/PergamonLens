@@ -14,7 +14,9 @@ public sealed record BookCatalogSearchResult(
     string? Isbn,
     int? PagesCount,
     string? CoverImageUrl,
-    string? Format = null);
+    string? Format = null,
+    string? Genre = null,
+    string? Overview = null);
 
 /// <summary>
 ///Contrato para el servicio de catálogo bibliográfico oficial (OpenLibrary API).

@@ -12,5 +12,7 @@ public sealed record BookCatalogSearchResultDto(
     string? Isbn,
     int? PagesCount,
     string? CoverImageUrl,
-    string? Format = null);
+    string? Format = null,
+    string? Genre = null,
+    string? Overview = null);
 

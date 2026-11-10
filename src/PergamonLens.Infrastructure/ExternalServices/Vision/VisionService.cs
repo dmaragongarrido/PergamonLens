@@ -97,7 +97,9 @@ public sealed class VisionService : IVisionService
                 DetectedFormat: geminiAnalysis.Format,
                 DetectedPlatform: geminiAnalysis.Platform,
                 DetectedReleaseYear: geminiAnalysis.ReleaseYear,
-                SuggestedSearchQuery: geminiAnalysis.SuggestedSearchQuery);
+                SuggestedSearchQuery: geminiAnalysis.SuggestedSearchQuery,
+                DetectedGenre: geminiAnalysis.Genre,
+                DetectedOverview: geminiAnalysis.Overview);
         }
 
         _logger.LogWarning("Fase 2 no obtuvo resultado estructurado de Gemini. Aplicando degradación elegante a fallback de desarrollo.");

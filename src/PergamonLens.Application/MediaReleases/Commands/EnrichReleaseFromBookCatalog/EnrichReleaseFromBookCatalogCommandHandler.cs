@@ -46,7 +46,9 @@ public sealed class EnrichReleaseFromBookCatalogCommandHandler : IRequestHandler
             publishYear,
             request.PagesCount,
             request.CoverImageUrl,
-            isbn);
+            isbn,
+            request.Genre,
+            request.Overview);
 
         await _repository.UpdateAsync(release, cancellationToken);
 

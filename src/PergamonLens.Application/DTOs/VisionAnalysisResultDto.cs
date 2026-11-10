@@ -16,4 +16,6 @@ public sealed record VisionAnalysisResultDto(
     string? DetectedFormat = null,
     string? DetectedPlatform = null,
     int? DetectedReleaseYear = null,
-    string? SuggestedSearchQuery = null);
+    string? SuggestedSearchQuery = null,
+    string? DetectedGenre = null,
+    string? DetectedOverview = null);

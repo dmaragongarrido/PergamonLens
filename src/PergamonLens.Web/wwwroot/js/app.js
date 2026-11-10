@@ -21,6 +21,7 @@
     statistics: null,
     currentCategory: 'music', // 'music' | 'books' | 'games'
     currentFilter: 'all',
+    currentGenreFilter: 'all',
     searchQuery: '',
     searchDebounceTimer: null,
     selectedScanBlob: null,
@@ -46,6 +47,45 @@
     OpticalDiscGame: 'Disco Óptico',
     Cartridge: 'Cartucho',
     GameCollectorEdition: 'Ed. Coleccionista'
+  };
+
+  const CANONICAL_GENRES = {
+    music: [
+      'Rock Progresivo',
+      'Rock / Alternativo',
+      'Heavy Metal',
+      'Jazz / Bebop',
+      'Electrónica / Synth-pop',
+      'Hip-Hop / Rap',
+      'Clásica / BSO',
+      'Soul / Funk / R&B',
+      'Folk / Cantautor',
+      'Pop'
+    ],
+    books: [
+      'Ciencia Ficción',
+      'Fantasía',
+      'Novela Histórica',
+      'Thriller / Misterio',
+      'Ensayo / Filosofía',
+      'Cómic / Manga',
+      'Terror / Gótico',
+      'Biografía / Historia',
+      'Divulgación Científica',
+      'Clásicos Literarios'
+    ],
+    games: [
+      'RPG / Action RPG',
+      'Acción / Aventura',
+      'Survival Horror',
+      'Plataformas / Metroidvania',
+      'Estrategia / Táctico',
+      'Shooter / FPS',
+      'Lucha / Arcade',
+      'JRPG',
+      'Simulación / Carreras',
+      'Indie / Puzzle'
+    ]
   };
 
   function getFormatDisplayLabel(format) {
@@ -575,12 +615,58 @@
     }
   }
 
+  function renderGenreFilterOptions() {
+    const select = document.getElementById('genreFilterSelect');
+    if (!select) return;
+
+    const activeCat = state.currentCategory || 'music';
+    const catReleases = state.allReleases.filter(r => getReleaseCategoryKey(r) === activeCat);
+
+    const uniqueGenresSet = new Set();
+    catReleases.forEach(r => {
+      if (r.genre && typeof r.genre === 'string') {
+        r.genre
+          .split(/[•,/|]/)
+          .map(part => part.trim())
+          .filter(Boolean)
+          .forEach(g => uniqueGenresSet.add(g));
+      }
+    });
+
+    const uniqueGenres = Array.from(uniqueGenresSet).sort((a, b) => a.localeCompare(b, 'es'));
+    if (state.currentGenreFilter !== 'all' && !uniqueGenres.includes(state.currentGenreFilter)) {
+      state.currentGenreFilter = 'all';
+    }
+
+    const defaultLabel = activeCat === 'books'
+      ? '🎭 Todos los géneros literarios'
+      : activeCat === 'games'
+        ? '🎭 Todos los géneros gamer'
+        : '🎭 Todos los estilos';
+
+    select.innerHTML = [
+      `<option value="all">${defaultLabel}</option>`,
+      ...uniqueGenres.map(g => `<option value="${escapeHtml(g)}" ${state.currentGenreFilter === g ? 'selected' : ''}>${escapeHtml(g)}</option>`)
+    ].join('');
+  }
+
   function applyClientCategoryAndFormatFilter() {
     const activeCat = state.currentCategory || 'music';
     let filtered = state.allReleases.filter(r => getReleaseCategoryKey(r) === activeCat);
 
+    renderGenreFilterOptions();
+
     if (state.currentFilter && state.currentFilter !== 'all') {
       filtered = filtered.filter(r => r.format === state.currentFilter);
+    }
+
+    if (state.currentGenreFilter && state.currentGenreFilter !== 'all') {
+      const targetGenre = state.currentGenreFilter.toLowerCase();
+      filtered = filtered.filter(r => {
+        if (!r.genre) return false;
+        const parts = r.genre.split(/[•,/|]/).map(p => p.trim().toLowerCase());
+        return parts.includes(targetGenre) || r.genre.toLowerCase().includes(targetGenre);
+      });
     }
 
     state.releases = filtered;
@@ -813,6 +899,7 @@
   function setCategory(category) {
     state.currentCategory = category;
     state.currentFilter = 'all';
+    state.currentGenreFilter = 'all';
 
     const tabs = document.querySelectorAll('#categoryTabs .category-tab-btn');
     tabs.forEach(btn => {
@@ -826,11 +913,11 @@
 
     if (searchInput) {
       if (category === 'music') {
-        searchInput.placeholder = 'Buscar por artista, álbum, sello, código de barras...';
+        searchInput.placeholder = 'Buscar por artista, álbum, género, sello, código de barras...';
       } else if (category === 'books') {
-        searchInput.placeholder = 'Buscar por título, autor, editorial, ISBN...';
+        searchInput.placeholder = 'Buscar por título, autor, género literario, editorial, ISBN...';
       } else if (category === 'games') {
-        searchInput.placeholder = 'Buscar por título, consola (PS5, Switch...), estudio, EAN...';
+        searchInput.placeholder = 'Buscar por título, consola (PS5, Switch...), género, estudio, EAN...';
       }
     }
 
@@ -886,6 +973,11 @@
     chips.forEach(chip => {
       chip.classList.toggle('active', chip.dataset.format === format);
     });
+    applyClientCategoryAndFormatFilter();
+  }
+
+  function setGenreFilter(genre) {
+    state.currentGenreFilter = genre || 'all';
     applyClientCategoryAndFormatFilter();
   }
 
@@ -1142,8 +1234,25 @@
     const inpCatNo = document.getElementById('createCatalogNumber');
     const lblLabel = document.getElementById('labelCreateLabel');
     const inpLabel = document.getElementById('createLabel');
+    const lblGenre = document.getElementById('labelCreateGenre');
+    const inpGenre = document.getElementById('createGenre');
+    const inpOverview = document.getElementById('createOverview');
+    const genreDatalist = document.getElementById('genreSuggestions');
     const bookFields = document.getElementById('bookSpecificFields');
     const gameFields = document.getElementById('gameSpecificFields');
+
+    // Poblar sugerencias canónicas + géneros ya existentes del usuario para esta categoría
+    if (genreDatalist) {
+      const canonicalList = CANONICAL_GENRES[cat] || CANONICAL_GENRES.music;
+      const existingSet = new Set(canonicalList);
+      state.allReleases
+        .filter(r => getReleaseCategoryKey(r) === cat && r.genre)
+        .forEach(r => existingSet.add(r.genre.trim()));
+
+      genreDatalist.innerHTML = Array.from(existingSet)
+        .map(g => `<option value="${escapeHtml(g)}"></option>`)
+        .join('');
+    }
 
     if (cat === 'books') {
       if (modalTitle) modalTitle.textContent = '📚 Alta Manual — Libro / Cómic';
@@ -1166,6 +1275,9 @@
       if (inpCatNo) inpCatNo.placeholder = 'Ej. 8497594258 o Nova #12';
       if (lblLabel) lblLabel.textContent = 'Editorial';
       if (inpLabel) inpLabel.placeholder = 'Ej. Minotauro, Debolsillo';
+      if (lblGenre) lblGenre.textContent = 'Género Literario';
+      if (inpGenre) inpGenre.placeholder = 'Ej. Ciencia Ficción, Fantasía, Ensayo...';
+      if (inpOverview) inpOverview.placeholder = 'Ej. Primera entrega de la trilogía galáctica de Hari Seldon...';
       if (bookFields) bookFields.style.display = 'grid';
       if (gameFields) gameFields.style.display = 'none';
       toggleFormatFields('Hardcover');
@@ -1189,6 +1301,9 @@
       if (inpCatNo) inpCatNo.placeholder = 'Ej. CUSA-00207 / PAL-ESP';
       if (lblLabel) lblLabel.textContent = 'Publisher / Distribuidora';
       if (inpLabel) inpLabel.placeholder = 'Ej. Sony Interactive, Nintendo';
+      if (lblGenre) lblGenre.textContent = 'Género del Videojuego';
+      if (inpGenre) inpGenre.placeholder = 'Ej. Action RPG, Survival Horror, Plataformas...';
+      if (inpOverview) inpOverview.placeholder = 'Ej. Obra maestra gótica ambientada en la ciudad maldita de Yharnam...';
       if (bookFields) bookFields.style.display = 'none';
       if (gameFields) gameFields.style.display = 'grid';
       toggleFormatFields('OpticalDiscGame');
@@ -1213,6 +1328,9 @@
       if (inpCatNo) inpCatNo.placeholder = 'Ej. SHVL 804';
       if (lblLabel) lblLabel.textContent = 'Sello Discográfico';
       if (inpLabel) inpLabel.placeholder = 'Ej. Harvest / EMI';
+      if (lblGenre) lblGenre.textContent = 'Género / Estilo Musical';
+      if (inpGenre) inpGenre.placeholder = 'Ej. Rock Progresivo, Jazz, Synth-pop...';
+      if (inpOverview) inpOverview.placeholder = 'Ej. Grabado en Abbey Road en 1972 con sintetizadores analógicos...';
       if (bookFields) bookFields.style.display = 'none';
       if (gameFields) gameFields.style.display = 'none';
       toggleFormatFields('Vinyl');
@@ -1246,6 +1364,10 @@
     const country = document.getElementById('createCountry').value.trim() || null;
     const coverImageUrl = document.getElementById('createCoverUrl').value.trim() || null;
     const notes = document.getElementById('createNotes').value.trim() || null;
+    const genreInput = document.getElementById('createGenre');
+    const genre = genreInput ? (genreInput.value.trim() || null) : null;
+    const overviewInput = document.getElementById('createOverview');
+    const overview = overviewInput ? (overviewInput.value.trim() || null) : null;
     const pagesInput = document.getElementById('createPagesCount');
     const pagesVal = pagesInput ? pagesInput.value : '';
     const platformInput = document.getElementById('createPlatform');
@@ -1282,7 +1404,9 @@
       vinylSpeed,
       discsCount: 1,
       pagesCount: (pagesVal && parseInt(pagesVal, 10) > 0) ? parseInt(pagesVal, 10) : null,
-      platform: platformVal || null
+      platform: platformVal || null,
+      genre,
+      overview
     };
 
     try {
@@ -1445,6 +1569,10 @@
       const detailCoverWidth = isBook ? '122px' : isGame ? '132px' : '145px';
       const detailCoverHeight = isBook ? '183px' : isGame ? '176px' : '145px';
 
+      const cleanOverview = release.overview
+        ? release.overview.trim().replace(/^[“"«]+|[”"»]+$/g, '').trim()
+        : '';
+
       body.innerHTML = `
         <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
           <div style="width: ${detailCoverWidth}; height: ${detailCoverHeight}; flex-shrink: 0; border-radius: var(--radius-md); overflow: hidden; background: #000; box-shadow: 0 8px 24px rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);">
@@ -1457,6 +1585,7 @@
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.4rem;">
               <span class="format-badge ${release.format.toLowerCase()}">${escapeHtml(getFormatDisplayLabel(release.format))}</span>
               ${(isGame && release.platform) ? `<span class="format-badge" style="background: rgba(56,189,248,0.2); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.4);">🎮 ${escapeHtml(release.platform)}</span>` : ''}
+              ${release.genre ? `<span class="genre-pill-badge" title="Género / Estilo: ${escapeHtml(release.genre)}">🎭 ${escapeHtml(release.genre)}</span>` : ''}
               <span class="status-badge ${release.status.toLowerCase()}">${escapeHtml(release.status)}</span>
               ${shortCond ? `<span class="condition-pill" title="Conservación: ${escapeHtml(release.mediaCondition)}">🏅 ${escapeHtml(shortCond)} (${escapeHtml(release.mediaCondition)})</span>` : ''}
               <span id="detailBackCoverBadgeSlot"></span>
@@ -1469,6 +1598,10 @@
             </div>
           </div>
         </div>
+
+        ${cleanOverview ? `
+          <blockquote class="curator-liner-notes">“${escapeHtml(cleanOverview)}”</blockquote>
+        ` : ''}
 
         ${release.notes ? `
           <div style="background: rgba(11, 15, 23, 0.55); border-left: 3px solid var(--accent-gold); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.84rem;">
@@ -1781,6 +1914,7 @@
 
           const metaParts = [
             item.publishYear ? `${item.publishYear}` : null,
+            item.genre ? `🎭 ${item.genre}` : null,
             item.publisher || null,
             item.pagesCount ? `${item.pagesCount} págs.` : null,
             item.isbn ? `ISBN: ${item.isbn}` : null
@@ -1827,6 +1961,7 @@
           const metaParts = [
             item.releaseYear ? `${item.releaseYear}` : null,
             item.platform ? `🎮 ${item.platform}` : null,
+            item.genre ? `🎭 ${item.genre}` : null,
             item.publisher || null
           ].filter(Boolean).join(' • ');
 
@@ -1914,7 +2049,9 @@
             publishYear: bookEd.publishYear || null,
             pagesCount: bookEd.pagesCount || null,
             coverImageUrl: bookEd.coverImageUrl || null,
-            isbn: bookEd.isbn || null
+            isbn: bookEd.isbn || null,
+            genre: bookEd.genre || null,
+            overview: bookEd.overview || null
           })
         });
 
@@ -1935,7 +2072,9 @@
             publisher: gameEd.publisher || null,
             releaseYear: gameEd.releaseYear || null,
             platform: gameEd.platform || null,
-            coverImageUrl: gameEd.coverImageUrl || null
+            coverImageUrl: gameEd.coverImageUrl || null,
+            genre: gameEd.genre || null,
+            overview: gameEd.overview || null
           })
         });
 
@@ -2023,6 +2162,7 @@
     setCategory,
     switchMobileNav,
     setFormatFilter,
+    setGenreFilter,
     handleSearchInput,
     openScannerModal,
     closeScannerModal,

@@ -29,4 +29,6 @@ public sealed record MediaReleaseDto(
     string Category = "Music",
     int? PagesCount = null,
     string? Platform = null,
-    string? ExternalCatalogId = null);
+    string? ExternalCatalogId = null,
+    string? Genre = null,
+    string? Overview = null);

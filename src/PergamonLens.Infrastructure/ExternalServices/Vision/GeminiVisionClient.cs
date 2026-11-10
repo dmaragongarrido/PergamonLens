@@ -40,6 +40,8 @@ public sealed class GeminiVisionClient : IGeminiVisionClient
         - barcode: Código de barras numérico si es legible en la imagen.
         - confidence: Puntuación de certeza entre 0.0 y 1.0.
         - suggestedSearchQuery: Cadena canónica óptima para buscar en Discogs, OpenLibrary o IGDB (ej: 'Pink Floyd The Dark Side of the Moon 1973', 'Stephen King The Shining 1977', 'The Legend of Zelda Ocarina of Time Nintendo 64').
+        - genre: Estilo o género cultural principal en español (ej: 'Rock Progresivo', 'Jazz', 'Heavy Metal', 'Ciencia Ficción', 'Fantasía', 'Novela Histórica', 'RPG de Acción', 'Survival Horror', 'Plataformas').
+        - overview: Breve nota editorial, sinopsis o curiosidad histórica sobre cómo se grabó o creó la obra (exactamente 1 o 2 frases concisas y elegantes en español, sin comillas exteriores ni títulos).
 
         Si la portada no tiene texto escrito pero es una obra famosa (reconocimiento iconográfico cultural, ej. el prisma de 'The Dark Side of the Moon', Led Zeppelin IV, o cartuchos clásicos), identifica la obra por su diseño gráfico.
         """;
@@ -181,9 +183,19 @@ public sealed class GeminiVisionClient : IGeminiVisionClient
                 {
                     ["type"] = "STRING",
                     ["description"] = "Query de búsqueda canónica óptima."
+                },
+                ["genre"] = new JsonObject
+                {
+                    ["type"] = "STRING",
+                    ["description"] = "Estilo o género artístico principal en español."
+                },
+                ["overview"] = new JsonObject
+                {
+                    ["type"] = "STRING",
+                    ["description"] = "Breve nota editorial, sinopsis o curiosidad histórica sobre la obra (1-2 frases concisas en español)."
                 }
             },
-            ["required"] = new JsonArray("mediaCategory", "title", "confidence", "suggestedSearchQuery")
+            ["required"] = new JsonArray("mediaCategory", "title", "confidence", "suggestedSearchQuery", "genre", "overview")
         };
 
         return new JsonObject
