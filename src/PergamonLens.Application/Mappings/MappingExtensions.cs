@@ -53,7 +53,10 @@ public static class MappingExtensions
             release.Notes,
             release.CreatedAtUtc,
             release.UpdatedAtUtc,
-            release.Tracks.Select(t => t.ToDto()).ToList(),
+            release.Tracks
+                .OrderBy(t => t, NaturalTrackPositionComparer.Instance)
+                .Select(t => t.ToDto())
+                .ToList(),
             release.Category.ToString(),
             release.PagesCount,
             release.Platform,
