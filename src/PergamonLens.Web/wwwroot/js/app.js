@@ -22,6 +22,8 @@
     currentCategory: 'music', // 'music' | 'books' | 'games'
     currentFilter: 'all',
     currentGenreFilter: 'all',
+    categoryScrollPositions: { music: 0, books: 0, games: 0 },
+    pendingRestoreScroll: null,
     searchQuery: '',
     searchDebounceTimer: null,
     selectedScanBlob: null,
@@ -579,12 +581,29 @@
     }
 
     const grid = document.getElementById('releasesGrid');
-    grid.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
-        <div class="spinner" style="margin: 0 auto 1rem; width: 28px; height: 28px; border-width: 3px;"></div>
-        Cargando bóveda...
-      </div>
-    `;
+    const scrollStage = document.getElementById('vaultScrollStage');
+
+    // Preservar la posición de scroll actual antes de la recarga
+    if (scrollStage && state.pendingRestoreScroll === null) {
+      state.pendingRestoreScroll = scrollStage.scrollTop;
+    }
+
+    const isInitialLoad = !state.allReleases || state.allReleases.length === 0;
+
+    if (isInitialLoad && grid) {
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+          <div class="spinner" style="margin: 0 auto 1rem; width: 28px; height: 28px; border-width: 3px;"></div>
+          Cargando bóveda...
+        </div>
+      `;
+    } else if (grid) {
+      // Bloquear altura mínima temporal para evitar que el contenedor de scroll colapse a 0 mientras la API responde
+      const currentHeight = grid.offsetHeight;
+      if (currentHeight > 0) {
+        grid.style.minHeight = `${currentHeight}px`;
+      }
+    }
 
     try {
       const params = new URLSearchParams();
@@ -602,6 +621,7 @@
 
       applyClientCategoryAndFormatFilter();
     } catch (err) {
+      if (grid) grid.style.minHeight = '';
       grid.innerHTML = `
         <div class="vault-empty-state">
           <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -721,10 +741,26 @@
           </div>
         </div>
       `;
+      grid.style.minHeight = '';
+      const scrollStage = document.getElementById('vaultScrollStage');
+      if (scrollStage && state.pendingRestoreScroll !== null) {
+        scrollStage.scrollTop = state.pendingRestoreScroll;
+        state.pendingRestoreScroll = null;
+      }
       return;
     }
 
     grid.innerHTML = releases.map(release => createReleaseCardHtml(release)).join('');
+
+    // Restauración limpia de scroll tras pintar y liberación de altura mínima
+    requestAnimationFrame(() => {
+      grid.style.minHeight = '';
+      const scrollStage = document.getElementById('vaultScrollStage');
+      if (scrollStage && state.pendingRestoreScroll !== null) {
+        scrollStage.scrollTop = state.pendingRestoreScroll;
+        state.pendingRestoreScroll = null;
+      }
+    });
   }
 
   function getGoldmineShortCode(condition) {
@@ -897,9 +933,17 @@
   }
 
   function setCategory(category) {
+    if (state.currentCategory === category) return;
+
+    const scrollStage = document.getElementById('vaultScrollStage');
+    if (scrollStage && state.currentCategory) {
+      state.categoryScrollPositions[state.currentCategory] = scrollStage.scrollTop;
+    }
+
     state.currentCategory = category;
     state.currentFilter = 'all';
     state.currentGenreFilter = 'all';
+    state.pendingRestoreScroll = state.categoryScrollPositions[category] || 0;
 
     const tabs = document.querySelectorAll('#categoryTabs .category-tab-btn');
     tabs.forEach(btn => {
@@ -2126,6 +2170,15 @@
   }
 
   async function init() {
+    const scrollStage = document.getElementById('vaultScrollStage');
+    if (scrollStage) {
+      scrollStage.addEventListener('scroll', () => {
+        if (state.currentCategory && state.pendingRestoreScroll === null) {
+          state.categoryScrollPositions[state.currentCategory] = scrollStage.scrollTop;
+        }
+      }, { passive: true });
+    }
+
     if (state.token) {
       try {
         const welcomeView = document.getElementById('welcomeView');
