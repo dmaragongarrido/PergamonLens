@@ -20,16 +20,16 @@ public sealed class CollectionRepository : ICollectionRepository
 
     public async Task<CollectionStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default)
     {
-        var totalReleases = await _context.MusicReleases.CountAsync(cancellationToken);
-        var confirmedReleases = await _context.MusicReleases.CountAsync(r => r.Status == ProcessingStatus.Confirmed, cancellationToken);
-        var pendingAnalysisReleases = await _context.MusicReleases.CountAsync(r => r.Status == ProcessingStatus.PendingAnalysis, cancellationToken);
-        var enrichedReleases = await _context.MusicReleases.CountAsync(r => r.Status == ProcessingStatus.Enriched, cancellationToken);
+        var totalReleases = await _context.MediaReleases.CountAsync(cancellationToken);
+        var confirmedReleases = await _context.MediaReleases.CountAsync(r => r.Status == ProcessingStatus.Confirmed, cancellationToken);
+        var pendingAnalysisReleases = await _context.MediaReleases.CountAsync(r => r.Status == ProcessingStatus.PendingAnalysis, cancellationToken);
+        var enrichedReleases = await _context.MediaReleases.CountAsync(r => r.Status == ProcessingStatus.Enriched, cancellationToken);
 
-        // Los tracks se consultan a través de MusicReleases para heredar el filtro global multi-usuario
-        var totalTracks = await _context.MusicReleases.SelectMany(r => r.Tracks).CountAsync(cancellationToken);
+        // Los tracks se consultan a través de MediaReleases para heredar el filtro global multi-usuario
+        var totalTracks = await _context.MediaReleases.SelectMany(r => r.Tracks).CountAsync(cancellationToken);
 
         // Duración estimada total acumulada
-        var durations = await _context.MusicReleases
+        var durations = await _context.MediaReleases
             .SelectMany(r => r.Tracks)
             .Where(t => t.Duration != null)
             .Select(t => t.Duration!.Value)
@@ -38,7 +38,7 @@ public sealed class CollectionRepository : ICollectionRepository
         var totalEstimatedDuration = durations.Aggregate(TimeSpan.Zero, (acc, next) => acc + next);
 
         // Desglose por formato
-        var formatGroups = await _context.MusicReleases
+        var formatGroups = await _context.MediaReleases
             .GroupBy(r => r.Format)
             .Select(g => new { Format = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
@@ -46,7 +46,7 @@ public sealed class CollectionRepository : ICollectionRepository
         var formatBreakdown = formatGroups.ToDictionary(g => g.Format, g => g.Count);
 
         // Desglose por condición física
-        var conditionGroups = await _context.MusicReleases
+        var conditionGroups = await _context.MediaReleases
             .Where(r => r.MediaCondition != null)
             .GroupBy(r => r.MediaCondition!.Value)
             .Select(g => new { Condition = g.Key, Count = g.Count() })
@@ -55,7 +55,7 @@ public sealed class CollectionRepository : ICollectionRepository
         var conditionBreakdown = conditionGroups.ToDictionary(g => g.Condition, g => g.Count);
 
         // Desglose por tamaño de vinilo
-        var sizeGroups = await _context.MusicReleases
+        var sizeGroups = await _context.MediaReleases
             .Where(r => r.VinylSize != null)
             .GroupBy(r => r.VinylSize!.Value)
             .Select(g => new { Size = g.Key, Count = g.Count() })
@@ -75,27 +75,27 @@ public sealed class CollectionRepository : ICollectionRepository
             VinylSizeBreakdown: vinylSizeBreakdown);
     }
 
-    public async Task<IReadOnlyList<MusicRelease>> GetRecentAdditionsAsync(int count = 10, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MediaRelease>> GetRecentAdditionsAsync(int count = 10, CancellationToken cancellationToken = default)
     {
-        return await _context.MusicReleases
+        return await _context.MediaReleases
             .Include(r => r.Tracks)
             .OrderByDescending(r => r.CreatedAtUtc)
             .Take(count)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<MusicRelease>> GetByArtistAsync(string artist, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MediaRelease>> GetByArtistAsync(string artist, CancellationToken cancellationToken = default)
     {
-        return await _context.MusicReleases
+        return await _context.MediaReleases
             .Include(r => r.Tracks)
             .Where(r => r.Artist.Contains(artist))
             .OrderByDescending(r => r.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<MusicRelease>> GetByFormatAsync(MediaFormat format, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MediaRelease>> GetByFormatAsync(MediaFormat format, CancellationToken cancellationToken = default)
     {
-        return await _context.MusicReleases
+        return await _context.MediaReleases
             .Include(r => r.Tracks)
             .Where(r => r.Format == format)
             .OrderByDescending(r => r.CreatedAtUtc)

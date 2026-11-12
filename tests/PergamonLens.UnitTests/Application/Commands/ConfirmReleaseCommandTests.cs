@@ -1,7 +1,7 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using PergamonLens.Application.Common.Exceptions;
-using PergamonLens.Application.MusicReleases.Commands.ConfirmRelease;
+using PergamonLens.Application.MediaReleases.Commands.ConfirmRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -11,13 +11,13 @@ namespace PergamonLens.UnitTests.Application.Commands;
 
 public class ConfirmReleaseCommandTests
 {
-    private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<IMediaReleaseRepository> _repositoryMock;
     private readonly ConfirmReleaseCommandHandler _handler;
     private readonly ConfirmReleaseCommandValidator _validator;
 
     public ConfirmReleaseCommandTests()
     {
-        _repositoryMock = new Mock<IMusicReleaseRepository>();
+        _repositoryMock = new Mock<IMediaReleaseRepository>();
         _handler = new ConfirmReleaseCommandHandler(_repositoryMock.Object);
         _validator = new ConfirmReleaseCommandValidator();
     }
@@ -26,7 +26,7 @@ public class ConfirmReleaseCommandTests
     public async Task Handle_WhenReleaseExists_ShouldSetGradingConfirmAndReturnDto()
     {
         // Arrange
-        var release = MusicRelease.Create(UserId.New(), "Wish You Were Here", "Pink Floyd");
+        var release = MediaRelease.Create(UserId.New(), "Wish You Were Here", "Pink Floyd");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -47,7 +47,7 @@ public class ConfirmReleaseCommandTests
         result.SleeveCondition.Should().Be("VeryGoodPlus");
         result.Notes.Should().Be("Bought in Camden Market 2022");
 
-        _repositoryMock.Verify(r => r.UpdateAsync(It.Is<MusicRelease>(m =>
+        _repositoryMock.Verify(r => r.UpdateAsync(It.Is<MediaRelease>(m =>
             m.Id == release.Id &&
             m.Status == ProcessingStatus.Confirmed &&
             m.MediaCondition == MediaCondition.NearMint &&
@@ -60,8 +60,8 @@ public class ConfirmReleaseCommandTests
         // Arrange
         var nonExistentId = Guid.NewGuid();
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(new MusicReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MusicRelease?)null);
+            .Setup(r => r.GetByIdAsync(new MediaReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MediaRelease?)null);
 
         var command = new ConfirmReleaseCommand(
             nonExistentId,

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PergamonLens.Application;
 using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Infrastructure;
@@ -79,7 +79,7 @@ app.MapGroup("/auth")
     .WithTags("Authentication");
 
 // Endpoints de catálogo y casos de uso de la colección
-app.MapMusicReleaseEndpoints();
+app.MapMediaReleaseEndpoints();
 app.MapCollectionEndpoints();
 app.MapDiscogsEndpoints();
 app.MapBookCatalogEndpoints();

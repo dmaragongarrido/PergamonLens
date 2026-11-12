@@ -192,6 +192,8 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
                 string developer = ExtractDeveloper(combinedText) ?? "Estudio Oficial";
                 string? publisher = ExtractPublisher(combinedText);
                 string? platform = ExtractPlatform(combinedText, query);
+                string? genre = ExtractGameGenre(combinedText);
+                string? overview = FormatGameOverview(extract, description, cleanTitle, developer, releaseYear, genre);
 
                 var item = new GameCatalogSearchResult(
                     GameKey: $"WIKI-{pageId}",
@@ -200,7 +202,9 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
                     ReleaseYear: releaseYear,
                     Publisher: publisher,
                     Platform: platform,
-                    CoverImageUrl: coverUrl);
+                    CoverImageUrl: coverUrl,
+                    Genre: genre,
+                    Overview: overview);
 
                 results.Add((index, item));
             }
@@ -252,6 +256,7 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
 
                 // Carátula vertical oficial de caja (600x900) desde el CDN de Steam
                 string coverUrl = $"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appId}/library_600x900.jpg";
+                string platform = ExtractPlatform(query, query) ?? "Multiplataforma / PC";
 
                 list.Add(new GameCatalogSearchResult(
                     GameKey: $"STEAM-{appId}",
@@ -259,8 +264,10 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
                     Developer: "Edición Multiplataforma / PC",
                     ReleaseYear: null,
                     Publisher: "Steam / Oficial",
-                    Platform: ExtractPlatform(query, query) ?? "Multiplataforma / PC",
-                    CoverImageUrl: coverUrl));
+                    Platform: platform,
+                    CoverImageUrl: coverUrl,
+                    Genre: "Videojuego",
+                    Overview: null));
             }
 
             return list;
@@ -270,6 +277,67 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
             _logger.LogWarning(ex, "Error al consultar Steam Store API ({Query})", query);
             return [];
         }
+    }
+
+    private static string? ExtractGameGenre(string text)
+    {
+        (string Match, string Label)[] genreMap =
+        [
+            ("survival horror", "Survival Horror"),
+            ("action role-playing", "RPG de Acción"),
+            ("tactical role-playing", "RPG Táctico"),
+            ("role-playing", "RPG"),
+            ("metroidvania", "Metroidvania"),
+            ("hack and slash", "Hack and Slash"),
+            ("beat 'em up", "Beat 'em up"),
+            ("action-adventure", "Acción / Aventura"),
+            ("first-person shooter", "Shooter (FPS)"),
+            ("third-person shooter", "Shooter"),
+            ("shoot 'em up", "Shoot 'em up"),
+            ("platform", "Plataformas"),
+            ("fighting", "Lucha"),
+            ("racing", "Conducción / Carreras"),
+            ("real-time strategy", "Estrategia (RTS)"),
+            ("turn-based strategy", "Estrategia por Turnos"),
+            ("strategy", "Estrategia"),
+            ("stealth", "Sigilo"),
+            ("puzzle", "Puzles"),
+            ("simulation", "Simulación"),
+            ("sports", "Deportes"),
+            ("adventure", "Aventura"),
+            ("action", "Acción")
+        ];
+
+        foreach (var (pattern, label) in genreMap)
+        {
+            if (text.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                return label;
+            }
+        }
+
+        return "Videojuego";
+    }
+
+    private static string? FormatGameOverview(
+        string extract,
+        string description,
+        string title,
+        string developer,
+        int? releaseYear,
+        string? genre)
+    {
+        if (!string.IsNullOrWhiteSpace(extract))
+        {
+            var cleaned = extract.Trim();
+            if (cleaned.Length > 230)
+            {
+                cleaned = cleaned[..227].TrimEnd() + "...";
+            }
+            return cleaned;
+        }
+
+        return null;
     }
 
     private static bool IsLikelyVideoGameArticle(string title, string text)

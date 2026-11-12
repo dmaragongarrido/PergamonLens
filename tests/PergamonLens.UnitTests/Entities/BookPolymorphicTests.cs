@@ -4,7 +4,7 @@ using FluentAssertions;
 using Moq;
 using Moq.Protected;
 using PergamonLens.Application.Common.Interfaces;
-using PergamonLens.Application.MusicReleases.Commands.ScanRelease;
+using PergamonLens.Application.MediaReleases.Commands.ScanRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -49,7 +49,7 @@ public sealed class BookPolymorphicTests
         var isbn13 = Barcode.Create("9788497594257");
         var year = ReleaseYear.Create(1951);
 
-        var book = MusicRelease.CreateBook(
+        var book = MediaRelease.CreateBook(
             TestUserId,
             title: "Fundación",
             author: "Isaac Asimov",
@@ -74,7 +74,7 @@ public sealed class BookPolymorphicTests
     [Fact]
     public void EnrichFromBookCatalog_ShouldUpdateMetadataAndSetEnrichedStatus()
     {
-        var book = MusicRelease.CreateBook(
+        var book = MediaRelease.CreateBook(
             TestUserId,
             title: "Fundacion",
             author: "Asimov",
@@ -103,7 +103,7 @@ public sealed class BookPolymorphicTests
     public async Task ScanReleaseCommandHandler_WhenIsbnBarcodeDetected_ShouldCreateAndEnrichBookViaOpenLibrary()
     {
         var visionMock = new Mock<IVisionService>();
-        var repoMock = new Mock<IMusicReleaseRepository>();
+        var repoMock = new Mock<IMediaReleaseRepository>();
         var currentUserMock = new Mock<ICurrentUserService>();
         var discogsMock = new Mock<IDiscogsService>();
         var bookCatalogMock = new Mock<IBookCatalogService>();
@@ -154,7 +154,7 @@ public sealed class BookPolymorphicTests
         dto.ExternalCatalogId.Should().Be("OL777M");
         dto.Status.Should().Be("Enriched");
 
-        repoMock.Verify(x => x.AddAsync(It.Is<MusicRelease>(r => r.Category == MediaCategory.Books), It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(x => x.AddAsync(It.Is<MediaRelease>(r => r.Category == MediaCategory.Books), It.IsAny<CancellationToken>()), Times.Once);
         discogsMock.Verify(x => x.SearchByBarcodeAsync(It.IsAny<Barcode>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -212,9 +212,54 @@ public sealed class BookPolymorphicTests
     }
 
     [Fact]
+    public async Task OpenLibraryService_WhenSubjectIsSpanishPoetry_ShouldNormalizeToPoesiaAndReturnNullOverviewWhenNoFirstSentence()
+    {
+        const string sampleJson = """
+        {
+          "numFound": 1,
+          "docs": [
+            {
+              "key": "/works/OL9999W",
+              "title": "Romancero Gitano",
+              "author_name": ["Federico García Lorca"],
+              "first_publish_year": 1928,
+              "edition_key": ["OL9999M"],
+              "subject": ["Accessible book", "Spanish poetry", "20th century"]
+            }
+          ]
+        }
+        """;
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(sampleJson, Encoding.UTF8, "application/json")
+            });
+
+        using var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("https://openlibrary.org/")
+        };
+
+        var service = new OpenLibraryService(httpClient);
+        var result = await service.LookupByIsbnAsync("978-84-376-0114-4");
+
+        result.Should().NotBeNull();
+        result!.Genre.Should().Be("Poesía"); // Spanish poetry normalizado a Poesía
+        result.Overview.Should().BeNull(); // Cero frases robóticas
+    }
+
+    [Fact]
     public void CreateVideoGame_And_EnrichFromGameCatalog_ShouldSetVideoGamePropertiesAndStatus()
     {
-        var game = MusicRelease.CreateVideoGame(
+        var game = MediaRelease.CreateVideoGame(
             TestUserId,
             title: "Bloodborne",
             developerOrStudio: "FromSoftware",
@@ -246,7 +291,7 @@ public sealed class BookPolymorphicTests
     public async Task ScanReleaseCommandHandler_WhenVideoGameDetected_ShouldCreateAndEnrichGame()
     {
         var visionMock = new Mock<IVisionService>();
-        var repoMock = new Mock<IMusicReleaseRepository>();
+        var repoMock = new Mock<IMediaReleaseRepository>();
         var currentUserMock = new Mock<ICurrentUserService>();
         var discogsMock = new Mock<IDiscogsService>();
         var gameCatalogMock = new Mock<IGameCatalogService>();
@@ -304,7 +349,7 @@ public sealed class BookPolymorphicTests
         dto.ExternalCatalogId.Should().Be("WIKI-999");
         dto.Status.Should().Be("Enriched");
 
-        repoMock.Verify(x => x.AddAsync(It.Is<MusicRelease>(r => r.Category == MediaCategory.VideoGames), It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(x => x.AddAsync(It.Is<MediaRelease>(r => r.Category == MediaCategory.VideoGames), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

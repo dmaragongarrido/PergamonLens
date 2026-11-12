@@ -11,5 +11,7 @@ public sealed record GameCatalogSearchResultDto(
     string? Publisher,
     string? Platform,
     string? CoverImageUrl,
-    string? Format = null);
+    string? Format = null,
+    string? Genre = null,
+    string? Overview = null);
 

@@ -191,6 +191,91 @@ public class DiscogsServiceTests
     }
 
     [Fact]
+    public async Task GetReleaseDetailsAsync_WhenTracklistHasHeadingsSubtracksAndDuplicatePositions_ShouldFilterFlattenAndDisambiguate()
+    {
+        // Arrange
+        var jsonResponse = """
+        {
+            "id": 112233,
+            "title": "Tubular Bells",
+            "artists": [
+                { "name": "Mike Oldfield" }
+            ],
+            "year": 1973,
+            "labels": [
+                { "name": "Virgin", "catno": "V 2001" }
+            ],
+            "tracklist": [
+                { "type_": "heading", "title": "Side One", "position": "" },
+                { "type_": "track", "position": "1", "title": "Part One", "duration": "25:30" },
+                { "type_": "heading", "title": "Side Two", "position": "" },
+                {
+                    "type_": "index",
+                    "position": "2",
+                    "title": "Part Two Suite",
+                    "sub_tracks": [
+                        { "type_": "track", "position": "1", "title": "Part Two (A)", "duration": "10:00" },
+                        { "type_": "track", "position": "1", "title": "Sailor's Hornpipe", "duration": "2:30" }
+                    ]
+                }
+            ]
+        }
+        """;
+
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        // Act
+        var details = await _service.GetReleaseDetailsAsync(112233, CancellationToken.None);
+
+        // Assert
+        details.Should().NotBeNull();
+        details!.Tracks.Should().HaveCount(3);
+        // Track 1: "1"
+        details.Tracks[0].Position.Should().Be("1");
+        details.Tracks[0].Title.Should().Be("Part One");
+        // Subtrack 1: originally "1", already taken -> "1.2"
+        details.Tracks[1].Position.Should().Be("1.2");
+        details.Tracks[1].Title.Should().Be("Part Two (A)");
+        // Subtrack 2: originally "1", "1" and "1.2" taken -> "1.3"
+        details.Tracks[2].Position.Should().Be("1.3");
+        details.Tracks[2].Title.Should().Be("Sailor's Hornpipe");
+    }
+
+    [Fact]
+    public async Task GetReleaseDetailsAsync_WhenNoAuthenticNotes_ShouldReturnNullOverviewAndNormalizeSpanishGenre()
+    {
+        // Arrange: Release de Discogs sin campo "notes" y con género "Classical"
+        var jsonResponse = """
+        {
+            "id": 554433,
+            "title": "Symphony No. 5",
+            "artists": [
+                { "name": "Ludwig van Beethoven" }
+            ],
+            "year": 1962,
+            "genres": [ "Classical" ],
+            "styles": [ "Romantic" ],
+            "labels": [
+                { "name": "Deutsche Grammophon", "catno": "138 804" }
+            ],
+            "tracklist": [
+                { "position": "A1", "title": "Allegro con brio", "duration": "7:10" }
+            ]
+        }
+        """;
+
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        // Act
+        var details = await _service.GetReleaseDetailsAsync(554433, CancellationToken.None);
+
+        // Assert
+        details.Should().NotBeNull();
+        details!.Overview.Should().BeNull(); // Cero frases robóticas sintéticas
+        details.Genre.Should().Be("Clásica / Romantic"); // Género normalizado al español
+    }
+
+    [Fact]
     public async Task GetReleaseDetailsAsync_WhenIdIsInvalid_ShouldReturnNull()
     {
         // Act

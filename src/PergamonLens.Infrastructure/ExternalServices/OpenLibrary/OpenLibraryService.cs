@@ -11,7 +11,7 @@ namespace PergamonLens.Infrastructure.ExternalServices.OpenLibrary;
 /// </summary>
 public sealed class OpenLibraryService : IBookCatalogService
 {
-    private const string FieldsList = "key,title,author_name,first_publish_year,publisher,isbn,number_of_pages_median,cover_i,edition_key";
+    private const string FieldsList = "key,title,author_name,first_publish_year,publisher,isbn,number_of_pages_median,cover_i,edition_key,subject,first_sentence";
 
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenLibraryService> _logger;
@@ -143,6 +143,8 @@ public sealed class OpenLibraryService : IBookCatalogService
                     : null;
 
                 string? isbn = preferredIsbn ?? ExtractPreferredIsbn(item);
+                string? genre = ExtractBookGenre(item);
+                string? overview = ExtractBookOverview(item, author, publishYear, publisher, pagesCount, genre);
 
                 string? coverUrl = null;
                 if (item.TryGetProperty("cover_i", out var cProp) && cProp.TryGetInt64(out var coverId) && coverId > 0)
@@ -162,7 +164,9 @@ public sealed class OpenLibraryService : IBookCatalogService
                     Publisher: publisher?.Trim(),
                     Isbn: isbn,
                     PagesCount: pagesCount,
-                    CoverImageUrl: coverUrl));
+                    CoverImageUrl: coverUrl,
+                    Genre: genre,
+                    Overview: overview));
             }
 
             return list;
@@ -172,6 +176,152 @@ public sealed class OpenLibraryService : IBookCatalogService
             _logger.LogWarning(ex, "Error al consultar OpenLibrary API ({Url})", relativeUrl);
             return [];
         }
+    }
+
+    private static string? ExtractBookGenre(JsonElement element)
+    {
+        if (!element.TryGetProperty("subject", out var arr) || arr.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        string? firstCandidate = null;
+        foreach (var item in arr.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var val = item.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(val) || val.Length > 45 || val.Length < 3)
+            {
+                continue;
+            }
+
+            if (val.Contains("Accessible book", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Protected DAISY", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("In library", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Large type", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Translations", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("OverDrive", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains(" Reading Level", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("New York Times", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("Open Library", StringComparison.OrdinalIgnoreCase) ||
+                val.Contains("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var normalized = NormalizeBookGenre(val);
+            if (!normalized.Equals(val, StringComparison.OrdinalIgnoreCase))
+            {
+                return normalized; // Encontrado un género canónico traducido al español
+            }
+
+            firstCandidate ??= normalized;
+        }
+
+        return firstCandidate;
+    }
+
+    private static string NormalizeBookGenre(string rawSubject)
+    {
+        var subject = rawSubject.Trim();
+
+        (string Pattern, string Label)[] genreMap =
+        [
+            ("science fiction", "Ciencia Ficción"),
+            ("sci-fi", "Ciencia Ficción"),
+            ("fantasy", "Fantasía"),
+            ("poetry", "Poesía"),
+            ("poesía", "Poesía"),
+            ("historical fiction", "Ficción Histórica"),
+            ("detective", "Novela Negra / Policiaca"),
+            ("mystery", "Misterio"),
+            ("thriller", "Thriller"),
+            ("horror", "Terror"),
+            ("terror", "Terror"),
+            ("biography", "Biografía"),
+            ("autobiography", "Autobiografía"),
+            ("philosophy", "Filosofía"),
+            ("filosofía", "Filosofía"),
+            ("drama", "Drama"),
+            ("theatre", "Teatro"),
+            ("theater", "Teatro"),
+            ("romance", "Romance"),
+            ("love stories", "Romance"),
+            ("comic", "Cómic"),
+            ("graphic novel", "Novela Gráfica"),
+            ("manga", "Manga"),
+            ("history", "Historia"),
+            ("historia", "Historia"),
+            ("children", "Literatura Infantil"),
+            ("juvenile", "Literatura Juvenil"),
+            ("young adult", "Literatura Juvenil"),
+            ("adventure", "Aventura"),
+            ("essay", "Ensayo"),
+            ("ensayo", "Ensayo"),
+            ("short stories", "Relatos"),
+            ("classics", "Clásicos"),
+            ("classic literature", "Clásicos"),
+            ("art", "Arte"),
+            ("science", "Divulgación Científica"),
+            ("psychology", "Psicología"),
+            ("sociology", "Sociología"),
+            ("politics", "Política"),
+            ("economics", "Economía"),
+            ("fiction", "Ficción"),
+            ("novels", "Novela"),
+            ("literature", "Literatura")
+        ];
+
+        foreach (var (pattern, label) in genreMap)
+        {
+            if (subject.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                return label;
+            }
+        }
+
+        return subject;
+    }
+
+    private static string? ExtractBookOverview(
+        JsonElement element,
+        string author,
+        int? publishYear,
+        string? publisher,
+        int? pagesCount,
+        string? genre)
+    {
+        string? firstSentence = null;
+        if (element.TryGetProperty("first_sentence", out var fsProp))
+        {
+            if (fsProp.ValueKind == JsonValueKind.String)
+            {
+                firstSentence = fsProp.GetString();
+            }
+            else if (fsProp.ValueKind == JsonValueKind.Array)
+            {
+                firstSentence = ExtractFirstStringFromArray(element, "first_sentence");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(firstSentence))
+        {
+            var cleaned = firstSentence.Trim().Trim('"');
+            if (cleaned.Length >= 20)
+            {
+                if (cleaned.Length > 220)
+                {
+                    cleaned = cleaned[..217].TrimEnd() + "...";
+                }
+                return cleaned;
+            }
+        }
+
+        return null;
     }
 
     private static string? ExtractFirstStringFromArray(JsonElement element, string propertyName)

@@ -29,9 +29,9 @@ public static class MappingExtensions
             formattedDuration);
     }
 
-    public static MusicReleaseDto ToDto(this MusicRelease release)
+    public static MediaReleaseDto ToDto(this MediaRelease release)
     {
-        return new MusicReleaseDto(
+        return new MediaReleaseDto(
             release.Id.Value,
             release.UserId.Value,
             release.Format.ToString(),
@@ -53,11 +53,16 @@ public static class MappingExtensions
             release.Notes,
             release.CreatedAtUtc,
             release.UpdatedAtUtc,
-            release.Tracks.Select(t => t.ToDto()).ToList(),
+            release.Tracks
+                .OrderBy(t => t, NaturalTrackPositionComparer.Instance)
+                .Select(t => t.ToDto())
+                .ToList(),
             release.Category.ToString(),
             release.PagesCount,
             release.Platform,
-            release.ExternalCatalogId);
+            release.ExternalCatalogId,
+            release.Genre,
+            release.Overview);
     }
 
     public static CollectionStatisticsDto ToDto(this CollectionStatistics stats)
@@ -84,7 +89,9 @@ public static class MappingExtensions
             result.Label,
             result.CatalogueNumber,
             result.Country,
-            result.CoverThumbUrl);
+            result.CoverThumbUrl,
+            result.Format,
+            result.Genre);
     }
 
     public static BookCatalogSearchResultDto ToDto(this BookCatalogSearchResult result)
@@ -98,7 +105,9 @@ public static class MappingExtensions
             result.Isbn,
             result.PagesCount,
             result.CoverImageUrl,
-            result.Format);
+            result.Format,
+            result.Genre,
+            result.Overview);
     }
 
     public static GameCatalogSearchResultDto ToDto(this GameCatalogSearchResult result)
@@ -111,7 +120,9 @@ public static class MappingExtensions
             result.Publisher,
             result.Platform,
             result.CoverImageUrl,
-            result.Format);
+            result.Format,
+            result.Genre,
+            result.Overview);
     }
 
     public static VisionAnalysisResultDto ToDto(this VisionExtractionResult result)
@@ -128,6 +139,8 @@ public static class MappingExtensions
             result.DetectedFormat,
             result.DetectedPlatform,
             result.DetectedReleaseYear,
-            result.SuggestedSearchQuery);
+            result.SuggestedSearchQuery,
+            result.DetectedGenre,
+            result.DetectedOverview);
     }
 }

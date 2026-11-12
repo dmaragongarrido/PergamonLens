@@ -40,9 +40,9 @@ public sealed class ReleaseScanBackgroundWorker : BackgroundService
 
                 using var scope = _scopeFactory.CreateScope();
                 var visionService = scope.ServiceProvider.GetRequiredService<IVisionService>();
-                var repository = scope.ServiceProvider.GetRequiredService<IMusicReleaseRepository>();
+                var repository = scope.ServiceProvider.GetRequiredService<IMediaReleaseRepository>();
 
-                var releaseId = new MusicReleaseId(task.ReleaseId);
+                var releaseId = new MediaReleaseId(task.ReleaseId);
                 var release = await repository.GetByIdAsync(releaseId, stoppingToken);
 
                 if (release is null)
@@ -75,7 +75,9 @@ public sealed class ReleaseScanBackgroundWorker : BackgroundService
                         extraction.DetectedArtist,
                         barcode,
                         catNo,
-                        label: extraction.DetectedLabel);
+                        label: extraction.DetectedLabel,
+                        genre: extraction.DetectedGenre,
+                        overview: extraction.DetectedOverview);
 
                     await repository.UpdateAsync(release, stoppingToken);
                     _logger.LogInformation("Release {ReleaseId} identificada exitosamente como '{Title}' de '{Artist}'",

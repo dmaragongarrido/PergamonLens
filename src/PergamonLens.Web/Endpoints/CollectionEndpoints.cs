@@ -1,6 +1,6 @@
-using MediatR;
+﻿using MediatR;
 using PergamonLens.Application.DTOs;
-using PergamonLens.Application.MusicReleases.Queries.GetCollectionStatistics;
+using PergamonLens.Application.MediaReleases.Queries.GetCollectionStatistics;
 
 namespace PergamonLens.Web.Endpoints;
 

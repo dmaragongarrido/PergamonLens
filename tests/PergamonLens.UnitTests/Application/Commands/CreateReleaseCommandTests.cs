@@ -1,7 +1,7 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using PergamonLens.Application.Common.Interfaces;
-using PergamonLens.Application.MusicReleases.Commands.CreateRelease;
+using PergamonLens.Application.MediaReleases.Commands.CreateRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Repositories;
@@ -10,14 +10,14 @@ namespace PergamonLens.UnitTests.Application.Commands;
 
 public class CreateReleaseCommandTests
 {
-    private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<IMediaReleaseRepository> _repositoryMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly CreateReleaseCommandHandler _handler;
     private readonly CreateReleaseCommandValidator _validator;
 
     public CreateReleaseCommandTests()
     {
-        _repositoryMock = new Mock<IMusicReleaseRepository>();
+        _repositoryMock = new Mock<IMediaReleaseRepository>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _currentUserServiceMock.Setup(s => s.UserId).Returns("default-test-user");
 
@@ -57,7 +57,7 @@ public class CreateReleaseCommandTests
         result.DiscsCount.Should().Be(1);
         result.UserId.Should().Be("default-test-user");
 
-        _repositoryMock.Verify(r => r.AddAsync(It.Is<MusicRelease>(m =>
+        _repositoryMock.Verify(r => r.AddAsync(It.Is<MediaRelease>(m =>
             m.Title == "The Dark Side of the Moon" &&
             m.Artist == "Pink Floyd" &&
             m.UserId.Value == "default-test-user" &&

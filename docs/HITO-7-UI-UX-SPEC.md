@@ -2,7 +2,7 @@
 
 - **Documento:** `docs/HITO-7-UI-UX-SPEC.md`
 - **Hito:** **Hito 7: Rediseño UI/UX Premium & Experiencia Móvil**
-- **Autores:** Diego M. Aragón Garrido & G (Pair Programming)
+- **Autores:** Diego M. & G (Pair Programming)
 - **Estado:** **Aprobado para implementación**
 
 ---

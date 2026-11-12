@@ -142,17 +142,25 @@
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, sello, código de barras..." oninput="app.handleSearchInput(event)">
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por artista, álbum, género, sello, código de barras..." oninput="app.handleSearchInput(event)">
               </div>
             </section>
 
-            <!-- Filtros de Formato Físico (Dinámicos según categoría activa) -->
-            <div class="filter-chips" id="formatFilters">
-              <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
-              <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
-              <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
-              <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
-              <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
+            <!-- Filtros de Formato Físico y Género Cultural (Dinámicos según categoría activa) -->
+            <div class="vault-filters-row">
+              <div class="filter-chips" id="formatFilters">
+                <button class="chip-btn active" data-format="all" onclick="app.setFormatFilter('all')">Todos</button>
+                <button class="chip-btn" data-format="Vinyl" onclick="app.setFormatFilter('Vinyl')">Vinilos</button>
+                <button class="chip-btn" data-format="CD" onclick="app.setFormatFilter('CD')">CDs</button>
+                <button class="chip-btn" data-format="Cassette" onclick="app.setFormatFilter('Cassette')">Casetes</button>
+                <button class="chip-btn" data-format="BoxSet" onclick="app.setFormatFilter('BoxSet')">Box Sets</button>
+              </div>
+
+              <div class="genre-filter-wrapper" id="genreFilterWrapper">
+                <select id="genreFilterSelect" class="genre-filter-select" aria-label="Filtrar por género o estilo" onchange="app.setGenreFilter(this.value)">
+                  <option value="all">🎭 Todos los géneros</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -329,11 +337,6 @@
             <div class="scanner-viewport">
               <video id="cameraVideo" autoplay playsinline muted></video>
               <canvas id="cameraCanvas"></canvas>
-              <div class="scanner-overlay">
-                <div class="scanner-target-box">
-                  <div class="scanner-laser-line"></div>
-                </div>
-              </div>
             </div>
             <p class="scanner-hint-text">Apunta a la portada o al código de barras (EAN / ISBN). Al disparar o elegir de galería se analizará al instante.</p>
 
@@ -514,9 +517,21 @@
               </div>
             </div>
 
+            <div class="form-row" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label class="form-label" id="labelCreateGenre">Género / Estilo Artístico</label>
+                <input type="text" id="createGenre" list="genreSuggestions" class="form-input" placeholder="Ej. Rock Progresivo, Jazz, Synth-pop...">
+                <datalist id="genreSuggestions"></datalist>
+              </div>
+              <div class="form-group">
+                <label class="form-label">URL de Imagen de Portada</label>
+                <input type="url" id="createCoverUrl" class="form-input" placeholder="https://ejemplo.com/portada.jpg">
+              </div>
+            </div>
+
             <div class="form-group" style="margin-top: 1rem;">
-              <label class="form-label">URL de Imagen de Portada</label>
-              <input type="url" id="createCoverUrl" class="form-input" placeholder="https://ejemplo.com/portada.jpg">
+              <label class="form-label" id="labelCreateOverview">Reseña / Liner Notes (1-2 frases)</label>
+              <input type="text" id="createOverview" class="form-input" maxlength="1000" placeholder="Breve nota editorial, sinopsis o curiosidad sobre la obra...">
             </div>
 
             <div class="form-group" style="margin-top: 1rem;">

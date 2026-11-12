@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using PergamonLens.Application.DTOs;
-using PergamonLens.Application.MusicReleases.Queries.SearchDiscogs;
+using PergamonLens.Application.MediaReleases.Queries.SearchDiscogs;
 using PergamonLens.Domain.Services;
 
 namespace PergamonLens.Web.Endpoints;

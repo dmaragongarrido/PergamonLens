@@ -38,7 +38,7 @@ public static class DependencyInjection
                     errorCodesToAdd: null);
             }));
 
-        services.AddScoped<IMusicReleaseRepository, MusicReleaseRepository>();
+        services.AddScoped<IMediaReleaseRepository, MediaReleaseRepository>();
         services.AddScoped<ICollectionRepository, CollectionRepository>();
 
         // 2. Cliente HTTP Resiliente para Discogs (Polly)

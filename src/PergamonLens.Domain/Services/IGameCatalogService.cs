@@ -11,7 +11,9 @@ public sealed record GameCatalogSearchResult(
     string? Publisher,
     string? Platform,
     string? CoverImageUrl,
-    string? Format = null);
+    string? Format = null,
+    string? Genre = null,
+    string? Overview = null);
 
 /// <summary>
 /// Contrato para el servicio de catálogo de videojuegos (Consola, Retro y PC).

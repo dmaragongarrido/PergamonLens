@@ -1,7 +1,7 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using PergamonLens.Application.Common.Exceptions;
-using PergamonLens.Application.MusicReleases.Commands.DeleteRelease;
+using PergamonLens.Application.MediaReleases.Commands.DeleteRelease;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Repositories;
 using PergamonLens.Domain.ValueObjects;
@@ -10,13 +10,13 @@ namespace PergamonLens.UnitTests.Application.Commands;
 
 public class DeleteReleaseCommandTests
 {
-    private readonly Mock<IMusicReleaseRepository> _repositoryMock;
+    private readonly Mock<IMediaReleaseRepository> _repositoryMock;
     private readonly DeleteReleaseCommandHandler _handler;
     private readonly DeleteReleaseCommandValidator _validator;
 
     public DeleteReleaseCommandTests()
     {
-        _repositoryMock = new Mock<IMusicReleaseRepository>();
+        _repositoryMock = new Mock<IMediaReleaseRepository>();
         _handler = new DeleteReleaseCommandHandler(_repositoryMock.Object);
         _validator = new DeleteReleaseCommandValidator();
     }
@@ -25,7 +25,7 @@ public class DeleteReleaseCommandTests
     public async Task Handle_WhenReleaseExists_ShouldCallDeleteAsync()
     {
         // Arrange
-        var release = MusicRelease.Create(UserId.New(), "Rumours", "Fleetwood Mac");
+        var release = MediaRelease.Create(UserId.New(), "Rumours", "Fleetwood Mac");
         _repositoryMock
             .Setup(r => r.GetByIdAsync(release.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(release);
@@ -45,8 +45,8 @@ public class DeleteReleaseCommandTests
         // Arrange
         var nonExistentId = Guid.NewGuid();
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(new MusicReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MusicRelease?)null);
+            .Setup(r => r.GetByIdAsync(new MediaReleaseId(nonExistentId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MediaRelease?)null);
 
         var command = new DeleteReleaseCommand(nonExistentId);
 

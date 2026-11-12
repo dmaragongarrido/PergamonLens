@@ -26,14 +26,19 @@ public sealed class InvalidReleaseYearException(string message) : DomainExceptio
 public sealed class InvalidUserIdException(string message) : DomainException(message);
 
 /// <summary>
+/// Excepción lanzada cuando una operación o regla sobre un ejemplar físico (MediaRelease) es inválida.
+/// </summary>
+public class MediaReleaseDomainException(string message) : DomainException(message);
+
+/// <summary>
 /// Excepción lanzada cuando una operación o regla sobre un lanzamiento musical es inválida.
 /// </summary>
-public class MusicReleaseDomainException(string message) : DomainException(message);
+public class MusicReleaseDomainException(string message) : MediaReleaseDomainException(message);
 
 /// <summary>
 /// Excepción lanzada cuando una operación o regla sobre un vinilo es inválida.
 /// </summary>
-public sealed class VinylRecordDomainException(string message) : MusicReleaseDomainException(message);
+public sealed class VinylRecordDomainException(string message) : MediaReleaseDomainException(message);
 
 /// <summary>
 /// Excepción lanzada cuando los datos de una pista de audio son inválidos.
