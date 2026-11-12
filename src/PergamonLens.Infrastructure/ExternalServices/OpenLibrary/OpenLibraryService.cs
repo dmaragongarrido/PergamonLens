@@ -185,6 +185,7 @@ public sealed class OpenLibraryService : IBookCatalogService
             return null;
         }
 
+        string? firstCandidate = null;
         foreach (var item in arr.EnumerateArray())
         {
             if (item.ValueKind != JsonValueKind.String)
@@ -212,10 +213,78 @@ public sealed class OpenLibraryService : IBookCatalogService
                 continue;
             }
 
-            return val;
+            var normalized = NormalizeBookGenre(val);
+            if (!normalized.Equals(val, StringComparison.OrdinalIgnoreCase))
+            {
+                return normalized; // Encontrado un género canónico traducido al español
+            }
+
+            firstCandidate ??= normalized;
         }
 
-        return null;
+        return firstCandidate;
+    }
+
+    private static string NormalizeBookGenre(string rawSubject)
+    {
+        var subject = rawSubject.Trim();
+
+        (string Pattern, string Label)[] genreMap =
+        [
+            ("science fiction", "Ciencia Ficción"),
+            ("sci-fi", "Ciencia Ficción"),
+            ("fantasy", "Fantasía"),
+            ("poetry", "Poesía"),
+            ("poesía", "Poesía"),
+            ("historical fiction", "Ficción Histórica"),
+            ("detective", "Novela Negra / Policiaca"),
+            ("mystery", "Misterio"),
+            ("thriller", "Thriller"),
+            ("horror", "Terror"),
+            ("terror", "Terror"),
+            ("biography", "Biografía"),
+            ("autobiography", "Autobiografía"),
+            ("philosophy", "Filosofía"),
+            ("filosofía", "Filosofía"),
+            ("drama", "Drama"),
+            ("theatre", "Teatro"),
+            ("theater", "Teatro"),
+            ("romance", "Romance"),
+            ("love stories", "Romance"),
+            ("comic", "Cómic"),
+            ("graphic novel", "Novela Gráfica"),
+            ("manga", "Manga"),
+            ("history", "Historia"),
+            ("historia", "Historia"),
+            ("children", "Literatura Infantil"),
+            ("juvenile", "Literatura Juvenil"),
+            ("young adult", "Literatura Juvenil"),
+            ("adventure", "Aventura"),
+            ("essay", "Ensayo"),
+            ("ensayo", "Ensayo"),
+            ("short stories", "Relatos"),
+            ("classics", "Clásicos"),
+            ("classic literature", "Clásicos"),
+            ("art", "Arte"),
+            ("science", "Divulgación Científica"),
+            ("psychology", "Psicología"),
+            ("sociology", "Sociología"),
+            ("politics", "Política"),
+            ("economics", "Economía"),
+            ("fiction", "Ficción"),
+            ("novels", "Novela"),
+            ("literature", "Literatura")
+        ];
+
+        foreach (var (pattern, label) in genreMap)
+        {
+            if (subject.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                return label;
+            }
+        }
+
+        return subject;
     }
 
     private static string? ExtractBookOverview(
@@ -252,33 +321,7 @@ public sealed class OpenLibraryService : IBookCatalogService
             }
         }
 
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(genre))
-        {
-            parts.Add($"Obra literaria de {genre} escrita por {author.Trim()}");
-        }
-        else
-        {
-            parts.Add($"Obra escrita por {author.Trim()}");
-        }
-
-        if (publishYear.HasValue)
-        {
-            parts.Add($"publicada originalmente en {publishYear.Value}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(publisher))
-        {
-            parts.Add($"(edición de {publisher.Trim()})");
-        }
-
-        string note = string.Join(" ", parts) + ".";
-        if (pagesCount.HasValue && pagesCount.Value > 0)
-        {
-            note += $" Consta de {pagesCount.Value} páginas.";
-        }
-
-        return note;
+        return null;
     }
 
     private static string? ExtractFirstStringFromArray(JsonElement element, string propertyName)

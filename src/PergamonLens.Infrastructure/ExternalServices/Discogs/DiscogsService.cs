@@ -200,13 +200,32 @@ public sealed partial class DiscogsService : IDiscogsService
         var primaryStyle = styles?.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s))?.Trim();
         var primaryGenre = genres?.FirstOrDefault(g => !string.IsNullOrWhiteSpace(g))?.Trim();
 
+        string? result;
         if (!string.IsNullOrWhiteSpace(primaryStyle) && !string.IsNullOrWhiteSpace(primaryGenre) &&
             !primaryStyle.Equals(primaryGenre, StringComparison.OrdinalIgnoreCase))
         {
-            return $"{primaryGenre} / {primaryStyle}";
+            result = $"{primaryGenre} / {primaryStyle}";
+        }
+        else
+        {
+            result = primaryStyle ?? primaryGenre;
         }
 
-        return primaryStyle ?? primaryGenre;
+        return NormalizeMusicGenre(result);
+    }
+
+    private static string? NormalizeMusicGenre(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        var normalized = raw
+            .Replace("Classical", "Clásica", StringComparison.OrdinalIgnoreCase)
+            .Replace("Electronic", "Electrónica", StringComparison.OrdinalIgnoreCase)
+            .Replace("Stage & Screen", "Banda Sonora", StringComparison.OrdinalIgnoreCase)
+            .Replace("Soundtrack", "Banda Sonora", StringComparison.OrdinalIgnoreCase)
+            .Replace("Folk, World, & Country", "Folk / Tradicional", StringComparison.OrdinalIgnoreCase);
+
+        return normalized.Trim();
     }
 
     private static string? FormatDiscogsOverview(
@@ -242,41 +261,7 @@ public sealed partial class DiscogsService : IDiscogsService
             }
         }
 
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(genre))
-        {
-            parts.Add($"Obra representativa de {genre}");
-        }
-        else
-        {
-            parts.Add($"Edición fonográfica de {artist.Trim()}");
-        }
-
-        if (year.HasValue && !string.IsNullOrWhiteSpace(label))
-        {
-            parts.Add($"editada en {year.Value} bajo el sello {label.Trim()}");
-        }
-        else if (year.HasValue)
-        {
-            parts.Add($"publicada en {year.Value}");
-        }
-        else if (!string.IsNullOrWhiteSpace(label))
-        {
-            parts.Add($"publicada por {label.Trim()}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(country))
-        {
-            parts.Add($"({country.Trim()})");
-        }
-
-        string sentence = string.Join(" ", parts) + ".";
-        if (trackCount > 0)
-        {
-            sentence += $" Contiene {trackCount} cortes registrados en esta edición física.";
-        }
-
-        return sentence;
+        return null;
     }
 
     [GeneratedRegex(@"\[(?:a|l|r|m|url|b|i|u)=?([^\]]*)\]", RegexOptions.Compiled)]

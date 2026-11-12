@@ -242,6 +242,40 @@ public class DiscogsServiceTests
     }
 
     [Fact]
+    public async Task GetReleaseDetailsAsync_WhenNoAuthenticNotes_ShouldReturnNullOverviewAndNormalizeSpanishGenre()
+    {
+        // Arrange: Release de Discogs sin campo "notes" y con género "Classical"
+        var jsonResponse = """
+        {
+            "id": 554433,
+            "title": "Symphony No. 5",
+            "artists": [
+                { "name": "Ludwig van Beethoven" }
+            ],
+            "year": 1962,
+            "genres": [ "Classical" ],
+            "styles": [ "Romantic" ],
+            "labels": [
+                { "name": "Deutsche Grammophon", "catno": "138 804" }
+            ],
+            "tracklist": [
+                { "position": "A1", "title": "Allegro con brio", "duration": "7:10" }
+            ]
+        }
+        """;
+
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        // Act
+        var details = await _service.GetReleaseDetailsAsync(554433, CancellationToken.None);
+
+        // Assert
+        details.Should().NotBeNull();
+        details!.Overview.Should().BeNull(); // Cero frases robóticas sintéticas
+        details.Genre.Should().Be("Clásica / Romantic"); // Género normalizado al español
+    }
+
+    [Fact]
     public async Task GetReleaseDetailsAsync_WhenIdIsInvalid_ShouldReturnNull()
     {
         // Act

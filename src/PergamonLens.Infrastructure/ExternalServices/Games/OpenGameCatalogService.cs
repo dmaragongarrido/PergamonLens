@@ -267,7 +267,7 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
                     Platform: platform,
                     CoverImageUrl: coverUrl,
                     Genre: "Videojuego",
-                    Overview: $"Edición oficial de {name.Trim()} catalogada para {platform}."));
+                    Overview: null));
             }
 
             return list;
@@ -337,13 +337,7 @@ public sealed partial class OpenGameCatalogService : IGameCatalogService
             return cleaned;
         }
 
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            return $"{title} ({description.Trim()}). Desarrollado por {developer}.";
-        }
-
-        var yearPart = releaseYear.HasValue ? $" lanzado en {releaseYear.Value}" : string.Empty;
-        return $"Título de {genre ?? "videojuegos"}{yearPart}, desarrollado por {developer}.";
+        return null;
     }
 
     private static bool IsLikelyVideoGameArticle(string title, string text)

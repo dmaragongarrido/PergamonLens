@@ -212,6 +212,51 @@ public sealed class BookPolymorphicTests
     }
 
     [Fact]
+    public async Task OpenLibraryService_WhenSubjectIsSpanishPoetry_ShouldNormalizeToPoesiaAndReturnNullOverviewWhenNoFirstSentence()
+    {
+        const string sampleJson = """
+        {
+          "numFound": 1,
+          "docs": [
+            {
+              "key": "/works/OL9999W",
+              "title": "Romancero Gitano",
+              "author_name": ["Federico García Lorca"],
+              "first_publish_year": 1928,
+              "edition_key": ["OL9999M"],
+              "subject": ["Accessible book", "Spanish poetry", "20th century"]
+            }
+          ]
+        }
+        """;
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(sampleJson, Encoding.UTF8, "application/json")
+            });
+
+        using var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("https://openlibrary.org/")
+        };
+
+        var service = new OpenLibraryService(httpClient);
+        var result = await service.LookupByIsbnAsync("978-84-376-0114-4");
+
+        result.Should().NotBeNull();
+        result!.Genre.Should().Be("Poesía"); // Spanish poetry normalizado a Poesía
+        result.Overview.Should().BeNull(); // Cero frases robóticas
+    }
+
+    [Fact]
     public void CreateVideoGame_And_EnrichFromGameCatalog_ShouldSetVideoGamePropertiesAndStatus()
     {
         var game = MediaRelease.CreateVideoGame(
