@@ -140,10 +140,14 @@ PergamonLens/
   - Taxonomía artística (`Genre`) con filtro dinámico en la bóveda y autocompletado canónico en alta manual.
   - Experiencia de Comisario (*Liner Notes* / `Overview`): reseñas y notas editoriales breves de 1-2 frases extraídas de IA y catálogos oficiales, presentadas en cursiva entre comillas sin cabeceras redundantes.
   - Portabilidad agnóstica de entorno y batería de **181 tests** (161 unitarios + 20 de integración) al 100% en verde.
-- [ ] **Hito 10: CI/CD, Despliegue & Producción**
-  - Dockerización final multi-stage y optimización del pipeline de GitHub Actions.
-  - Configuración de variables de entorno, secrets y publicación en producción.
-  - Verificación final de escaparate técnico de autor.
+- [ ] **Hito 10: Frontend Enterprise Dual (Angular 19 Standalone, Signals & TypeScript)**
+  - Arquitectura frontend complementaria en `src/PergamonLens.Frontend.Angular` conviviendo con la versión nativa Vanilla JS.
+  - Tipado estricto con TypeScript, Signals reactivos y componentes Standalone desacoplados.
+  - Enrutamiento dual en ASP.NET Core (`/` para Vanilla JS y `/ng/` para Angular) con selector de interfaz en cabecera.
+- [ ] **Hito 11: CI/CD, Despliegue Multi-Stage & Producción (Cloud 0,00 €)**
+  - Dockerización multi-stage (.NET 10 + Angular) y orquestación con `docker-compose.prod.yml`.
+  - Configuración de variables de entorno, secrets y despliegue cloud con HTTPS nativo para WebRTC.
+  - Verificación final de escaparate técnico de autor con doble interfaz frontend.
 
 ---
 
