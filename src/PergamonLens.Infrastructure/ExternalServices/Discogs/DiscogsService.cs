@@ -104,13 +104,33 @@ public sealed partial class DiscogsService : IDiscogsService
                 genre,
                 response.Tracklist?.Count ?? 0);
 
-            var tracks = (response.Tracklist ?? [])
+            var flattenedTracks = FlattenTracks(response.Tracklist)
                 .Where(t => !string.IsNullOrWhiteSpace(t.Title))
-                .Select(t => new DiscogsTrackItem(
-                    string.IsNullOrWhiteSpace(t.Position) ? "-" : t.Position.Trim(),
-                    t.Title.Trim(),
-                    ParseDuration(t.Duration)))
                 .ToList();
+
+            var usedPositions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tracks = new List<DiscogsTrackItem>();
+            int fallbackIndex = 1;
+
+            foreach (var t in flattenedTracks)
+            {
+                string basePos = string.IsNullOrWhiteSpace(t.Position)
+                    ? (fallbackIndex++).ToString()
+                    : t.Position.Trim();
+
+                string candidate = basePos;
+                int suffix = 2;
+                while (usedPositions.Contains(candidate))
+                {
+                    candidate = $"{basePos}.{suffix++}";
+                }
+
+                usedPositions.Add(candidate);
+                tracks.Add(new DiscogsTrackItem(
+                    candidate,
+                    t.Title.Trim(),
+                    ParseDuration(t.Duration)));
+            }
 
             return new DiscogsReleaseDetails(
                 response.Id,
@@ -293,5 +313,33 @@ public sealed partial class DiscogsService : IDiscogsService
                 new TimeSpan(hr, min, sec),
             _ => null
         };
+    }
+
+    private static IEnumerable<DiscogsTrackResponse> FlattenTracks(IEnumerable<DiscogsTrackResponse>? tracklist)
+    {
+        if (tracklist is null)
+        {
+            yield break;
+        }
+
+        foreach (var track in tracklist)
+        {
+            if (string.Equals(track.Type, "heading", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (track.SubTracks is { Count: > 0 })
+            {
+                foreach (var subTrack in FlattenTracks(track.SubTracks))
+                {
+                    yield return subTrack;
+                }
+            }
+            else
+            {
+                yield return track;
+            }
+        }
     }
 }

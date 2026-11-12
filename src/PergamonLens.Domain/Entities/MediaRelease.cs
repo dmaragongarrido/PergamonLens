@@ -494,9 +494,22 @@ public sealed class MediaRelease : AggregateRoot<MediaReleaseId>
         if (tracks is not null)
         {
             _tracks.Clear();
+            var usedPositions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var track in tracks)
             {
-                AddTrackInternal(track);
+                var position = track.Position;
+                var suffix = 2;
+                while (usedPositions.Contains(position))
+                {
+                    position = $"{track.Position}.{suffix++}";
+                }
+                usedPositions.Add(position);
+
+                var trackToAdd = position.Equals(track.Position, StringComparison.OrdinalIgnoreCase)
+                    ? track
+                    : Track.Create(position, track.Title, track.Duration);
+
+                _tracks.Add(trackToAdd);
             }
         }
 

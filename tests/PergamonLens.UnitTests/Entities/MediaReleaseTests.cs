@@ -247,6 +247,33 @@ public class MediaReleaseTests
             .Which.DiscogsReleaseId.Should().Be(24395);
     }
 
+    [Fact]
+    public void EnrichFromDiscogs_WhenTracksHaveDuplicatePositions_ShouldDisambiguatePositionsWithoutThrowing()
+    {
+        // Arrange
+        var release = MediaRelease.CreateCd(_testUserId, "Experimental", "Artist");
+        var tracks = new List<Track>
+        {
+            Track.Create("1", "Track One"),
+            Track.Create("1", "Track Two"),
+            Track.Create("1", "Track Three")
+        };
+
+        // Act
+        release.EnrichFromDiscogs(
+            discogsReleaseId: 9999,
+            tracks: tracks);
+
+        // Assert
+        release.Tracks.Should().HaveCount(3);
+        release.Tracks.ElementAt(0).Position.Should().Be("1");
+        release.Tracks.ElementAt(0).Title.Should().Be("Track One");
+        release.Tracks.ElementAt(1).Position.Should().Be("1.2");
+        release.Tracks.ElementAt(1).Title.Should().Be("Track Two");
+        release.Tracks.ElementAt(2).Position.Should().Be("1.3");
+        release.Tracks.ElementAt(2).Title.Should().Be("Track Three");
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-5)]

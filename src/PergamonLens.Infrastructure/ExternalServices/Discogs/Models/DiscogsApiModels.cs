@@ -115,6 +115,9 @@ public sealed class DiscogsImageResponse
 
 public sealed class DiscogsTrackResponse
 {
+    [JsonPropertyName("type_")]
+    public string? Type { get; set; }
+
     [JsonPropertyName("position")]
     public string Position { get; set; } = string.Empty;
 
@@ -123,4 +126,7 @@ public sealed class DiscogsTrackResponse
 
     [JsonPropertyName("duration")]
     public string? Duration { get; set; }
+
+    [JsonPropertyName("sub_tracks")]
+    public List<DiscogsTrackResponse>? SubTracks { get; set; }
 }
