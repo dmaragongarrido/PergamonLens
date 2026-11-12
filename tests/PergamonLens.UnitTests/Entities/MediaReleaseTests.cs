@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using PergamonLens.Domain.Entities;
 using PergamonLens.Domain.Enums;
 using PergamonLens.Domain.Events;
