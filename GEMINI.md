@@ -47,4 +47,8 @@ Al comenzar una nueva conversación y durante todo el desarrollo en este workspa
    - En qué hito técnico exacto nos quedamos.
    - Cuál es la siguiente acción inmediata recomendada de desarrollo.
 3. **Narración Paso a Paso en Tiempo Real (Obligatorio):** Antes de ejecutar herramientas (lectura/edición de archivos, comandos, tests), informa siempre al usuario/desarrollador con un mensaje breve de qué paso estás ejecutando (ej. *"Paso 2/5: Editando `styles.css` para añadir..."*) para que siempre sepa en qué estás trabajando y nunca parezca que el asistente está bloqueado en silencio.
-4. **Mantener actualizado el sistema:** Actualizar `PROGRESS.md` con cada avance o hito completado.
+4. **Desarrollo y Commits Atómicos (Regla de Oro):**
+   - **Modo Libreta durante pruebas:** Cuando el desarrollador esté probando o dando feedback, registrar ideas sin tocar código. Solo programar tras luz verde explícita.
+   - **Una sola cosa a la vez:** Abordar los cambios de 1 en 1, nunca en bloques masivos.
+   - **Commits atómicos inmediatos:** Cada corrección o mejora validada se sella con su propio commit atómico e independiente, garantizando que cualquier funcionalidad se pueda revertir (`git revert`) de forma aislada y limpia sin arrastrar nada más.
+5. **Mantener actualizado el sistema:** Actualizar `PROGRESS.md` con cada avance o hito completado.
