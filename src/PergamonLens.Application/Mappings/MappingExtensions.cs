@@ -90,6 +90,7 @@ public static class MappingExtensions
             result.CatalogueNumber,
             result.Country,
             result.CoverThumbUrl,
+            result.Format,
             result.Genre);
     }
 

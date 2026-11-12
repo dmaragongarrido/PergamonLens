@@ -12,5 +12,6 @@ public sealed record DiscogsSearchResultDto(
     string? CatalogueNumber,
     string? Country,
     string? CoverThumbUrl,
+    string? Format = null,
     string? Genre = null);
 

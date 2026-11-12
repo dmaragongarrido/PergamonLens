@@ -1956,21 +1956,26 @@
             ? `${item.author} — ${item.title}`
             : item.title;
 
-          const metaParts = [
-            item.publishYear ? `${item.publishYear}` : null,
-            item.genre ? `🎭 ${item.genre}` : null,
-            item.publisher || null,
-            item.pagesCount ? `${item.pagesCount} págs.` : null,
-            item.isbn ? `ISBN: ${item.isbn}` : null
-          ].filter(Boolean).join(' • ');
+          const badges = [];
+          if (item.format) badges.push(`<span class="catalog-meta-badge highlight">📕 ${escapeHtml(item.format)}</span>`);
+          if (item.publishYear) badges.push(`<span class="catalog-meta-badge">📅 ${escapeHtml(item.publishYear)}</span>`);
+          if (item.publisher) badges.push(`<span class="catalog-meta-badge">🏷️ ${escapeHtml(item.publisher)}</span>`);
+          if (item.pagesCount) badges.push(`<span class="catalog-meta-badge">📄 ${escapeHtml(item.pagesCount)} págs.</span>`);
+          if (item.isbn) badges.push(`<span class="catalog-meta-badge">🔢 ${escapeHtml(item.isbn)}</span>`);
+          if (item.genre) badges.push(`<span class="catalog-meta-badge">🎭 ${escapeHtml(item.genre)}</span>`);
+
+          const externalLink = `<a href="https://openlibrary.org/books/${encodeURIComponent(editionKey)}" target="_blank" rel="noopener noreferrer" class="catalog-external-link" onclick="event.stopPropagation()">Ver en OpenLibrary ↗</a>`;
 
           return `
             <div class="catalog-result-item" data-release-id="${escapeHtml(editionKey)}" onclick="app.selectCatalogEdition(this, '${escapeHtml(editionKey)}')">
               ${thumbHtml}
               <div class="catalog-result-info">
                 <div class="catalog-result-title" title="${escapeHtml(authorAndTitle)}">${escapeHtml(authorAndTitle)}</div>
-                <div class="catalog-result-meta">${escapeHtml(metaParts || 'Edición bibliográfica registrada')}</div>
-                <span class="catalog-result-id-pill">OL: ${escapeHtml(editionKey)}</span>
+                <div class="catalog-result-badges">${badges.join('')}</div>
+                <div class="catalog-result-footer">
+                  <span class="catalog-result-id-pill">OL: ${escapeHtml(editionKey)}</span>
+                  ${externalLink}
+                </div>
               </div>
               <div class="catalog-check-indicator" aria-hidden="true">✓</div>
             </div>
@@ -2002,20 +2007,39 @@
             ? `${item.developer} — ${item.title}`
             : item.title;
 
-          const metaParts = [
-            item.releaseYear ? `${item.releaseYear}` : null,
-            item.platform ? `🎮 ${item.platform}` : null,
-            item.genre ? `🎭 ${item.genre}` : null,
-            item.publisher || null
-          ].filter(Boolean).join(' • ');
+          const badges = [];
+          if (item.platform) badges.push(`<span class="catalog-meta-badge highlight">🎮 ${escapeHtml(item.platform)}</span>`);
+          if (item.format) badges.push(`<span class="catalog-meta-badge">🕹️ ${escapeHtml(item.format)}</span>`);
+          if (item.releaseYear) badges.push(`<span class="catalog-meta-badge">📅 ${escapeHtml(item.releaseYear)}</span>`);
+          if (item.publisher) badges.push(`<span class="catalog-meta-badge">🏷️ ${escapeHtml(item.publisher)}</span>`);
+          if (item.genre) badges.push(`<span class="catalog-meta-badge">🎭 ${escapeHtml(item.genre)}</span>`);
+
+          let externalUrl = '';
+          let externalLabel = 'Ver Ficha Oficial ↗';
+          if (gameKey.startsWith('STEAM-')) {
+            const appId = gameKey.replace('STEAM-', '');
+            externalUrl = `https://store.steampowered.com/app/${encodeURIComponent(appId)}/`;
+            externalLabel = 'Ver en Steam Store ↗';
+          } else if (gameKey.startsWith('WIKI-')) {
+            const pageId = gameKey.replace('WIKI-', '');
+            externalUrl = `https://en.wikipedia.org/?curid=${encodeURIComponent(pageId)}`;
+            externalLabel = 'Ver en Wikipedia ↗';
+          }
+
+          const externalLink = externalUrl
+            ? `<a href="${externalUrl}" target="_blank" rel="noopener noreferrer" class="catalog-external-link" onclick="event.stopPropagation()">${externalLabel}</a>`
+            : '';
 
           return `
             <div class="catalog-result-item" data-release-id="${escapeHtml(gameKey)}" onclick="app.selectCatalogEdition(this, '${escapeHtml(gameKey)}')">
               ${thumbHtml}
               <div class="catalog-result-info">
                 <div class="catalog-result-title" title="${escapeHtml(devAndTitle)}">${escapeHtml(devAndTitle)}</div>
-                <div class="catalog-result-meta">${escapeHtml(metaParts || 'Edición oficial de videojuego')}</div>
-                <span class="catalog-result-id-pill">ID: ${escapeHtml(gameKey)}</span>
+                <div class="catalog-result-badges">${badges.join('')}</div>
+                <div class="catalog-result-footer">
+                  <span class="catalog-result-id-pill">ID: ${escapeHtml(gameKey)}</span>
+                  ${externalLink}
+                </div>
               </div>
               <div class="catalog-check-indicator" aria-hidden="true">✓</div>
             </div>
@@ -2045,20 +2069,26 @@
           ? `${item.artist} — ${item.title}`
           : item.title;
 
-        const metaParts = [
-          item.year ? `${item.year}` : null,
-          item.label || null,
-          item.country || null,
-          item.catalogueNumber ? `Cat: ${item.catalogueNumber}` : null
-        ].filter(Boolean).join(' • ');
+        const badges = [];
+        if (item.format) badges.push(`<span class="catalog-meta-badge highlight">💿 ${escapeHtml(item.format)}</span>`);
+        if (item.year) badges.push(`<span class="catalog-meta-badge">📅 ${escapeHtml(item.year)}</span>`);
+        if (item.country) badges.push(`<span class="catalog-meta-badge">🌍 ${escapeHtml(item.country)}</span>`);
+        if (item.label) badges.push(`<span class="catalog-meta-badge">🏷️ ${escapeHtml(item.label)}</span>`);
+        if (item.catalogueNumber) badges.push(`<span class="catalog-meta-badge">🔢 ${escapeHtml(item.catalogueNumber)}</span>`);
+        if (item.genre) badges.push(`<span class="catalog-meta-badge">🎭 ${escapeHtml(item.genre)}</span>`);
+
+        const externalLink = `<a href="https://www.discogs.com/release/${encodeURIComponent(releaseId)}" target="_blank" rel="noopener noreferrer" class="catalog-external-link" onclick="event.stopPropagation()">Ver en Discogs ↗</a>`;
 
         return `
           <div class="catalog-result-item" data-release-id="${releaseId}" onclick="app.selectCatalogEdition(this, '${releaseId}')">
             ${thumbHtml}
             <div class="catalog-result-info">
               <div class="catalog-result-title" title="${escapeHtml(artistAndTitle)}">${escapeHtml(artistAndTitle)}</div>
-              <div class="catalog-result-meta">${escapeHtml(metaParts || 'Edición oficial registrada')}</div>
-              <span class="catalog-result-id-pill">ID: #${escapeHtml(releaseId)}</span>
+              <div class="catalog-result-badges">${badges.join('')}</div>
+              <div class="catalog-result-footer">
+                <span class="catalog-result-id-pill">ID: #${escapeHtml(releaseId)}</span>
+                ${externalLink}
+              </div>
             </div>
             <div class="catalog-check-indicator" aria-hidden="true">✓</div>
           </div>
