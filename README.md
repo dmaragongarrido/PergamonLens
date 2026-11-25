@@ -7,6 +7,7 @@
 *Música (Vinilos, CDs, Casetes) · Libros · Videojuegos*
 
 [![CI Build & Test](https://github.com/dmaragongarrido/PergamonLens/actions/workflows/ci.yml/badge.svg)](https://github.com/dmaragongarrido/PergamonLens/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?logo=render&logoColor=000)](https://pergamonlens.onrender.com/)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![C# 14](https://img.shields.io/badge/C%23-14-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/en-us/dotnet/csharp/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -48,8 +49,11 @@ PergamonLens/
 ├── tests/
 │   ├── PergamonLens.UnitTests/       # Pruebas unitarias de dominio y casos de uso
 │   └── PergamonLens.IntegrationTests/# Pruebas de integración con PostgreSQL real
-└── docker/
-    └── docker-compose.yml            # Orquestación de PostgreSQL 16 (Alpine)
+├── docker/
+│   ├── docker-compose.yml            # PostgreSQL 16 (Alpine) para desarrollo local
+│   └── docker-compose.prod.yml       # Orquestación completa App + PostgreSQL en producción
+├── Dockerfile                        # Build multi-stage .NET 10 (usuario non-root)
+└── render.yaml                       # Blueprint declarativo para despliegue continuo (HTTPS)
 ```
 
 ### 🧱 Principios de Diseño
@@ -139,10 +143,11 @@ PergamonLens/
   - Taxonomía artística (`Genre`) con filtro dinámico en la bóveda y autocompletado canónico en alta manual.
   - Experiencia de Comisario (*Liner Notes* / `Overview`): reseñas y notas editoriales breves de 1-2 frases extraídas de IA y catálogos oficiales, presentadas en cursiva entre comillas sin cabeceras redundantes.
   - Pulido de experiencia de comisario: ordenación alfanumérica natural del tracklist, normalización de géneros al español, fichas ampliadas en el buscador oficial y batería de **201 tests** (181 unitarios + 20 de integración) al 100% en verde.
-- [ ] **Hito 10: CI/CD, Dockerización & Despliegue en Producción (Cloud 0,00 €)**
-  - Dockerización multi-stage de producción (.NET 10) y orquestación con `docker-compose.prod.yml`.
-  - Configuración de variables de entorno, secrets y despliegue cloud con HTTPS nativo para cámara móvil WebRTC.
-  - Verificación final de escaparate técnico de autor en producción.
+- [x] **Hito 10: CI/CD, Dockerización & Despliegue en Producción (Cloud 0,00 €)**
+  - Preparación *Cloud-Native* en `Program.cs`: endpoint `GET /health` (`DatabaseHealthCheck`), `ForwardedHeaders` para proxies TLS, puerto dinámico `PORT` y soporte automático de `DATABASE_URL` URI (`PostgresConnectionStringHelper` + 3 tests unitarios, **204 tests en verde**).
+  - `Dockerfile` multi-stage `.NET 10` (`sdk:10.0` ➔ `aspnet:10.0`, usuario non-root `app`), `.dockerignore`, `docker/docker-compose.prod.yml` y `.env.example`.
+  - Validación automática de `docker build` integrada en GitHub Actions (`.github/workflows/ci.yml`) y Blueprint `render.yaml`.
+  - Despliegue continuo en vivo en **Render + Neon.tech** con HTTPS nativo para cámara móvil WebRTC: **[pergamonlens.onrender.com](https://pergamonlens.onrender.com/)**.
 
 ---
 
@@ -170,6 +175,28 @@ PergamonLens/
    ```bash
    dotnet run --project src/PergamonLens.Web
    ```
+
+---
+
+## ☁️ Despliegue en Producción (Cloud 0,00 €)
+
+**Demo en vivo:** [https://pergamonlens.onrender.com/](https://pergamonlens.onrender.com/) *(al operar sobre el tier gratuito, la primera petición tras >15 min de inactividad puede tardar ~30 s en despertar el contenedor).*
+
+```text
+GitHub (main) ──► GitHub Actions (204 tests + docker build)
+                        │
+                        ▼
+           Render (Contenedor .NET 10)
+           • HTTPS nativo (WebRTC móvil)
+           • Health Check: GET /health
+           • Usuario non-root (app)
+                        │
+                        ▼ (TLS / DATABASE_URL)
+           Neon.tech (PostgreSQL 16 Serverless)
+           • Migraciones EF Core automáticas
+```
+
+- **Portabilidad Cloud-Agnostic:** Al estar 100% containerizada con `Dockerfile` multi-stage, configuración por variables de entorno (`DATABASE_URL`, `Vision__ApiKey`, `Discogs__Token`) y `ForwardedHeaders`, la aplicación puede moverse sin cambios de código a **Azure Container Apps**, Render o cualquier VPS mediante `docker compose -f docker/docker-compose.prod.yml up --build`.
 
 ---
 
