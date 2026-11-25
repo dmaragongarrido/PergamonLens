@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using PergamonLens.Application;
 using PergamonLens.Application.Common.Interfaces;
 using PergamonLens.Infrastructure;
@@ -9,6 +10,25 @@ using PergamonLens.Web.Infrastructure;
 using PergamonLens.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Puerto dinámico para entornos Cloud / Contenedores (Render, Azure Container Apps, Railway, etc.)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port) && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
+// Soporte para Reverse Proxy TLS en Cloud (X-Forwarded-For / X-Forwarded-Proto)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Health Check nativo con verificación de conectividad a PostgreSQL
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("postgresql");
 
 // Servicios de Contexto HTTP y Usuario Actual
 builder.Services.AddHttpContextAccessor();
@@ -63,7 +83,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.UseForwardedHeaders();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors();
 
 // Habilitar archivos estáticos para la interfaz Web / PWA
@@ -72,6 +98,9 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Health Check público para Docker, Render y Azure Container Apps
+app.MapHealthChecks("/health");
 
 // Endpoints de autenticación nativos de ASP.NET Core Identity (/auth/register, /auth/login, etc.)
 app.MapGroup("/auth")

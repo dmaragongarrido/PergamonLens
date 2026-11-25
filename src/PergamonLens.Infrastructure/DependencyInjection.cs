@@ -24,9 +24,8 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // 1. Persistencia: PostgreSQL & EF Core
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=PergamonLensDb;Username=postgres;Password=postgres";
+        // 1. Persistencia: PostgreSQL & EF Core (soporta formato Npgsql y URI DATABASE_URL)
+        var connectionString = PostgresConnectionStringHelper.ResolveConnectionString(configuration);
 
         services.AddDbContext<PergamonLensDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>

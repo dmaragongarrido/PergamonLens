@@ -8,7 +8,7 @@
 
 [![CI Build & Test](https://github.com/dmaragongarrido/PergamonLens/actions/workflows/ci.yml/badge.svg)](https://github.com/dmaragongarrido/PergamonLens/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![C# 13](https://img.shields.io/badge/C%23-13-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/en-us/dotnet/csharp/)
+[![C# 14](https://img.shields.io/badge/C%23-14-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/en-us/dotnet/csharp/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -62,10 +62,9 @@ PergamonLens/
 - **Pipeline de Visión e IA Multimodal (Estrategia Híbrida & Polimórfica):**
   - **Fase 1 (Escudo Anti-Cuota Determinista Local, 0 coste, ~2 ms):** Decodificación algorítmica local en memoria de códigos de barras (EAN-13, UPC, Code 128, QR) con `ZXing.Net` y `SkiaSharp`. Detección determinista de prefijos Bookland (ISBN 978/979) para categorización automática de libros sin IA.
   - **Fase 2 (Visión Multimodal Polimórfica con Inferencia Estructurada):** Modelo de alta velocidad (**Google Gemini 2.0 Flash / Flash-Lite**) vía Google AI Studio (Tier gratuito permanente de 15 RPM sin tarjeta) con *Structured Outputs* (JSON Schema estricto) para catalogación polimórfica de **música (vinilos/CDs), libros y videojuegos**, incluyendo plataformas de consola, géneros artísticos, reseñas breves (*Liner Notes*), sellos/editoriales y reconocimiento iconográfico de portadas sin texto.
-  - **Resiliencia & Rate Limiting (Polly):** Políticas de reintento exponencial con *jitter* ante posibles errores `429 Too Many Requests`, limitador de tasa interno (*Rate Limiter*) y degradación elegante (*Graceful Degradation*) a estado `PendingAnalysis` o entrada manual si la red falla.
-  - **Privacidad & Offline (Ollama Fallback):** Soporte alternativo 100% desacoplado mediante el contrato [`IVisionService`](file:///src/PergamonLens.Domain/Services/IVisionService.cs) para inferencia local y privada con modelos *open source* (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) sin depender de proveedores cloud externos.
+  - **Privacidad & Offline (Ollama Fallback):** Soporte alternativo 100% desacoplado mediante el contrato [`IVisionService`](src/PergamonLens.Domain/Services/IVisionService.cs) para inferencia local y privada con modelos *open source* (**Llama 3.2 Vision / Qwen2-VL** vía Ollama) sin depender de proveedores cloud externos.
 - **Concurrencia & Asincronía con Channels:** Procesamiento en segundo plano de imágenes e indexación mediante `System.Threading.Channels` para garantizar tiempos de respuesta inmediatos al usuario.
-- **Resiliencia & Rate Limiting (Polly):** Control estricto de cuotas y políticas de reintento exponencial contra APIs externas que imponen límites de peticiones (ej. Discogs con 60 req/min).
+- **Resiliencia & Rate Limiting (Polly):** Políticas de reintento exponencial con *jitter*, fast-fail interactivo, control de cuotas contra APIs externas (ej. Discogs con 60 req/min y Gemini AI) y degradación elegante (*Graceful Degradation*) a estado `PendingAnalysis` o entrada manual si la red falla.
 - **Persistencia Robusta & Eficiente:** **PostgreSQL 16** (vía `Npgsql.EntityFrameworkCore.PostgreSQL`) con **Entity Framework Core**, migraciones automatizadas e índices optimizados, con huella de memoria ultraligera (~40 MB de RAM).
 - **Integración Continua & GitHub Flow:** Desarrollo guiado por ramas cortas (`feature/*`), validación estricta automatizada mediante **GitHub Actions** en cada Pull Request (`dotnet build` + `dotnet test`) y estrategia de *Squash & Merge* hacia `main`.
 
@@ -139,15 +138,11 @@ PergamonLens/
   - Soberanía del Coleccionista: capacidad de rectificar y re-vincular ediciones desde catálogos oficiales incluso en ejemplares con estado `Confirmed`, preservando la graduación física.
   - Taxonomía artística (`Genre`) con filtro dinámico en la bóveda y autocompletado canónico en alta manual.
   - Experiencia de Comisario (*Liner Notes* / `Overview`): reseñas y notas editoriales breves de 1-2 frases extraídas de IA y catálogos oficiales, presentadas en cursiva entre comillas sin cabeceras redundantes.
-  - Portabilidad agnóstica de entorno y batería de **181 tests** (161 unitarios + 20 de integración) al 100% en verde.
-- [ ] **Hito 10: Frontend Enterprise Dual (Angular 19 Standalone, Signals & TypeScript)**
-  - Arquitectura frontend complementaria en `src/PergamonLens.Frontend.Angular` conviviendo con la versión nativa Vanilla JS.
-  - Tipado estricto con TypeScript, Signals reactivos y componentes Standalone desacoplados.
-  - Enrutamiento dual en ASP.NET Core (`/` para Vanilla JS y `/ng/` para Angular) con selector de interfaz en cabecera.
-- [ ] **Hito 11: CI/CD, Despliegue Multi-Stage & Producción (Cloud 0,00 €)**
-  - Dockerización multi-stage (.NET 10 + Angular) y orquestación con `docker-compose.prod.yml`.
-  - Configuración de variables de entorno, secrets y despliegue cloud con HTTPS nativo para WebRTC.
-  - Verificación final de escaparate técnico de autor con doble interfaz frontend.
+  - Pulido de experiencia de comisario: ordenación alfanumérica natural del tracklist, normalización de géneros al español, fichas ampliadas en el buscador oficial y batería de **201 tests** (181 unitarios + 20 de integración) al 100% en verde.
+- [ ] **Hito 10: CI/CD, Dockerización & Despliegue en Producción (Cloud 0,00 €)**
+  - Dockerización multi-stage de producción (.NET 10) y orquestación con `docker-compose.prod.yml`.
+  - Configuración de variables de entorno, secrets y despliegue cloud con HTTPS nativo para cámara móvil WebRTC.
+  - Verificación final de escaparate técnico de autor en producción.
 
 ---
 
@@ -171,7 +166,7 @@ PergamonLens/
    ```bash
    dotnet test
    ```
-4. Ejecutar la aplicación:
+4. Ejecutar la aplicación y abrir `http://localhost:5147` en el navegador:
    ```bash
    dotnet run --project src/PergamonLens.Web
    ```
