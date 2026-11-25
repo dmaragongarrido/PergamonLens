@@ -45,3 +45,6 @@ jobs:
         env:
           ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=PergamonLensDb;Username=postgres;Password=postgres"
         run: dotnet test PergamonLens.slnx --no-build --configuration Release --verbosity normal
+
+      - name: 🐳 Validate production Docker image build
+        run: docker build -t pergamonlens:ci .

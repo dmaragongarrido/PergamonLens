@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: pergamonlens
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false
+      - key: Vision__ApiKey
+        sync: false
+      - key: Discogs__Token
+        sync: false
